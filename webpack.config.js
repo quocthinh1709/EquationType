@@ -83,6 +83,10 @@ module.exports = async (env, options) => {
               }
             },
           },
+          {
+            from: "node_modules/mathlive/fonts/*",
+            to: "fonts/[name][ext]",
+          }
         ],
       }),
       new HtmlWebpackPlugin({
