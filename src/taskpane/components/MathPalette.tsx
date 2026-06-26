@@ -143,7 +143,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
             {/* TAB 4: GIẢI TÍCH */}
             <PivotItem headerText="Giải tích">
                 <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="∫" style={btnStyle} onClick={() => onInsert("\\int_{#?}^{#?}")} title="Tích phân" />
+                    <DefaultButton text="∫" style={btnStyle} onClick={() => onInsert("\\int_{#0}^{#1}")} title="Tích phân" />
                     <DefaultButton text="∬" style={btnStyle} onClick={() => onInsert("\\iint ")} title="Tích phân kép" />
                     <DefaultButton text="∮" style={btnStyle} onClick={() => onInsert("\\oint ")} title="Tích phân đường" />
                     <DefaultButton text="lim" style={btnStyle} onClick={() => onInsert("\\lim_{#? \\to #?}")} title="Giới hạn" />
@@ -209,7 +209,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     <DefaultButton text="ω" style={btnStyle} onClick={() => onInsert("\\omega ")} title="Tần số góc (Omega)" />
                     <DefaultButton text="λ" style={btnStyle} onClick={() => onInsert("\\lambda ")} title="Bước sóng (Lambda)" />
                     <DefaultButton text="μ" style={btnStyle} onClick={() => onInsert("\\mu ")} title="Micro / Hệ số ma sát" />
-                    <DefaultButton text="Å" style={btnStyle} onClick={() => onInsert("\\text{A}^{\\circ}")} title="Angstrom" />
+                    <DefaultButton text="Å" style={btnStyle} onClick={() => onInsert("\\text{\\AA}")} title="Angstrom" />
                     <DefaultButton text="ħ" style={btnStyle} onClick={() => onInsert("\\hbar ")} title="Hằng số Planck thu gọn" />
                 </Stack>
             </PivotItem>
