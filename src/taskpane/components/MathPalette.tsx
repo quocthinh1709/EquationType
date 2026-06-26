@@ -1,6 +1,64 @@
 import * as React from "react";
 import { DefaultButton, Stack, Pivot, PivotItem } from "@fluentui/react";
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "math-field": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        "read-only"?: boolean | string;
+      };
+    }
+  }
+}
+// Hàm tạo nút bấm chứa công thức hiển thị trực quan
+// Hàm tạo nút bấm chứa công thức hiển thị trực quan (Đã fix lỗi click và kích thước)
+const MathBtn = ({ displayLatex, insertLatex, title, onInsert }: { displayLatex: string, insertLatex: string, title: string, onInsert: (l: string) => void }) => {
+    
+    // 1. Đồng bộ kích thước chuẩn 42px như tất cả các nút DefaultButton khác
+    const btnStyle = { 
+        minWidth: "42px", 
+        height: "42px", 
+        padding: "0", 
+        position: "relative" as any // Cần relative để làm chuẩn cho lớp kính tàng hình
+    }; 
+    
+    return (
+        <DefaultButton style={btnStyle} onClick={() => onInsert(insertLatex)} title={title}>
+            
+            {/* 2. LỚP KÍNH TÀNG HÌNH: Hứng trọn cú click chuột, bảo vệ không cho math-field nuốt sự kiện */}
+            <div 
+                style={{ 
+                    position: "absolute", 
+                    top: 0, left: 0, right: 0, bottom: 0, 
+                    zIndex: 10, 
+                    cursor: "pointer" 
+                }} 
+            />
+            
+            {/* 3. Khung hiển thị công thức */}
+            <math-field 
+                read-only 
+                style={{ 
+                    pointerEvents: "none", 
+                    border: "none", 
+                    background: "transparent", 
+                    padding: 0, 
+                    margin: 0,
+                    minHeight: "auto",
+                    fontSize: "18px", // Ép cỡ chữ nhỏ lại một chút để vừa khít ô 42px
+                    outline: "none"
+                }}
+            >
+                {displayLatex}
+            </math-field>
+
+        </DefaultButton>
+    );
+};
+
+
+
+
 export interface MathPaletteProps {
     onInsert: (latexCode: string) => void;
 }
@@ -129,10 +187,10 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     <DefaultButton text="∠" style={btnStyle} onClick={() => onInsert("\\angle ")} title="Góc" />
                     <DefaultButton text="⊥" style={btnStyle} onClick={() => onInsert("\\perp ")} title="Vuông góc" />
                     <DefaultButton text="∥" style={btnStyle} onClick={() => onInsert("\\parallel ")} title="Song song" />
-                    <DefaultButton text="v⃗" style={btnStyle} onClick={() => onInsert("\\vec{#0}")} title="Vector ký tự đơn" />
-                    <DefaultButton text="AB⃗" style={btnStyle} onClick={() => onInsert("\\overrightarrow{#0}")} title="Vector điểm (AB)" />
-                    <DefaultButton text="Â" style={btnStyle} onClick={() => onInsert("\\hat{ABC}")} title="Góc trên đầu (ABC)" />
-                    <DefaultButton text="AB⁀" style={btnStyle} onClick={() => onInsert("\\overset{\\frown}{AB}")} title="Cung tròn" />
+                    
+                    <MathBtn displayLatex="\vec{#?}" insertLatex="\vec{#0}" title="Vector" onInsert={onInsert} />
+                    <DefaultButton text="Â" style={btnStyle} onClick={() => onInsert("\\hat{#0}")} title="Góc trên đầu (ABC)" />
+                    <MathBtn displayLatex="\overset{\frown}{#0}" insertLatex="\overset{\frown}{#0}" title="Cung tròn" onInsert={onInsert} />
                 </Stack>
             </PivotItem>
 
@@ -146,7 +204,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     <DefaultButton text="t°" style={btnStyle} onClick={() => onInsert("\\xrightarrow{t^{\\circ}} ")} title="Phản ứng cần nhiệt độ" />
                     <DefaultButton text="xt" style={btnStyle} onClick={() => onInsert("\\xrightarrow{\\text{xt}} ")} title="Phản ứng cần xúc tác" />
                     <DefaultButton text="e⁻" style={btnStyle} onClick={() => onInsert("e^{-}")} title="Electron" />
-                    <DefaultButton text="A_Z X" style={btnStyle} onClick={() => onInsert("_{#?}^{#?}\\text{#?}")} title="Ký hiệu nguyên tử / Đồng vị" />
+                    <DefaultButton text="A_Z X" style={btnStyle} onClick={() => onInsert("\\ce{^{#?}_{#?}#?}")} title="Ký hiệu nguyên tử / Đồng vị" />
                     <DefaultButton text="Ω" style={btnStyle} onClick={() => onInsert("\\Omega ")} title="Ohm" />
                     <DefaultButton text="ω" style={btnStyle} onClick={() => onInsert("\\omega ")} title="Tần số góc (Omega)" />
                     <DefaultButton text="λ" style={btnStyle} onClick={() => onInsert("\\lambda ")} title="Bước sóng (Lambda)" />

@@ -22,12 +22,12 @@ export const customInlineShortcuts = {
     "tp": "\\int_{#?}^{#?}",
     "dh": "\\frac{d}{dx} #0",
 
-    "tp3": "∰",        
-    "song": "⤳", 
-    "gvuong": "⦜",
-    "angstrom": "Å",
-    "male": "♂",
-    "female": "♀",
+    "tp3": "\\iiint",        
+    "song": "\\rightsquigarrow", 
+    "gvuong": "\\square",
+    "angstrom": "\\text{Å}",
+    "male": "\\text{♂}",
+    "female": "\\text{♀}",
 };
 
 // 2. Danh sách lệnh tùy chỉnh (Macros - gõ có dấu \ phía trước)
@@ -40,7 +40,7 @@ export const customMacros = {
     // Phân số, căn, vector
     "phanso": "\\frac{#0}{#?}",
     "vecto": "\\vec{#0}",
-    "canbac2": "\\sqrt{#0}",
+    "canbachai": "\\sqrt{#0}",
     
     // Logic, toán tử
     "td": "\\Leftrightarrow ",
@@ -56,8 +56,8 @@ export const customMacros = {
     // Tích phân, đạo hàm
     "ticphan": "\\int_{#?}^{#?}",
     "daoham": "\\frac{d}{dx} #0",
-    "male": "♂",
-    "female": "♀",
-    "angstrom": "Å",
+    "male": "\\text{♂}",
+    "female": "\\text{♀}",
+    "angstrom": "\\text{Å}",
   
 };

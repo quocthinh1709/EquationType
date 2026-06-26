@@ -68,16 +68,48 @@ export default function App({ title }: AppProps) {
   // ==========================================
   const handleInsertEquation = async () => {
     if (!mathfieldRef.current) return;
-    const mathML = mathfieldRef.current.getValue("math-ml" as any);
-    const latex = mathfieldRef.current.value; 
-    //const latex = mathfieldRef.current.getValue("latex-expanded");
-    const htmlString = `<math xmlns="http://www.w3.org/1998/Math/MathML">${mathML}</math>`;
 
+    // 1. Lấy mã GỐC để lưu vào bộ nhớ (Giữ nguyên các phím tắt tự chế như \suyra, \hept)
+    const latexOriginal = mathfieldRef.current.value;
 
+    // 2. Lấy mã ĐÃ DỊCH để đưa cho Word vẽ hình (\suyra đã được MathLive tự biến thành \Rightarrow)
+    const latexExpanded = mathfieldRef.current.getValue("latex-expanded"); 
+
+    // ==========================================
+    // KỸ THUẬT KHUNG ẢO TÀNG HÌNH (Sạch lỗi 100%)
+    // ==========================================
+    // Tạo một thẻ <div> ẩn và nhét vào trang web để tránh lỗi "Not mounted"
+    const hiddenDiv = document.createElement("div");
+    hiddenDiv.style.display = "none";
+    document.body.appendChild(hiddenDiv);
+
+    // Tạo khung MathLive nhét vào div ẩn đó
+    const tempMf = new MathfieldElement();
+    hiddenDiv.appendChild(tempMf); 
+
+    // Đưa mã chuẩn vào khung ẩn
+    tempMf.value = latexExpanded;
+    const mathML = tempMf.getValue("math-ml" as any);
+
+    console.log("LATEX=", latexExpanded);
+console.log("MATHML=", mathML);
+
+    // Dịch xong thì xóa khung tàng hình đi để giải phóng bộ nhớ RAM
+    document.body.removeChild(hiddenDiv);
+
+    // Chuẩn bị chuỗi HTML cuối cùng
+    const htmlString = mathML.includes("<math") 
+      ? mathML 
+      : `<math xmlns="http://www.w3.org/1998/Math/MathML">${mathML}</math>`;
+
+    // ==========================================
+    // GIAO TIẾP VỚI MICROSOFT WORD
+    // ==========================================
     try {
-      // Tạo ID duy nhất và lưu mã LaTeX dài vô tận vào Settings
       const eqId = "LSTS_" + new Date().getTime();
-      Office.context.document.settings.set(eqId, latex);
+      
+      // Chú ý: Lưu latexOriginal vào Settings để bảo toàn chữ \suyra khi click đọc lại
+      Office.context.document.settings.set(eqId, latexOriginal);
       Office.context.document.settings.saveAsync();
 
       await Word.run(async (context) => {
@@ -88,15 +120,15 @@ export default function App({ title }: AppProps) {
 
         let targetRange = range;
 
-        // TÍNH NĂNG GHI ĐÈ: Nếu đang bôi đen/đứng ở công thức cũ, chọn nó để xóa
+        // Nếu đứng trong công thức cũ thì chọn toàn bộ để ghi đè
         if (!currentCc.isNullObject && currentCc.title === "LSTS_Math") {
           targetRange = currentCc.getRange("Whole");
         }
 
-        // Chèn hình ảnh toán học mới
+        // Chèn mã MathML vào Word
         const insertedRange = targetRange.insertHtml(htmlString, Word.InsertLocation.replace);
         
-        // Bọc lại bằng khung tàng hình để lần sau còn bấm vào sửa được
+        // Bọc Content Control để làm cầu nối đồng bộ 2 chiều
         const newCc = insertedRange.insertContentControl();
         newCc.title = "LSTS_Math";
         newCc.tag = eqId; 
@@ -123,6 +155,7 @@ export default function App({ title }: AppProps) {
       mf.style.padding = "10px";
       mf.style.minHeight = "100px";
       mf.style.backgroundColor = "#ffffff";
+      mf.style.boxSizing = "border-box";
 
       containerRef.current.appendChild(mf);
       mathfieldRef.current = mf;
