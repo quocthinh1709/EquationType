@@ -19,18 +19,19 @@
           // Bổ sung hàng loạt các gói mạnh mẽ nhất của TeX
           packages: {
             '[+]': [
-              'mhchem',     // Hóa học (VD: \ce{H2O})
-              'ams',        // Ký hiệu Toán học chuẩn của American Mathematical Society
-              'mathtools',  // Mở rộng của ams (chứa \xleftrightarrow và các mũi tên phức tạp)
-              'extpfeil',   // Mũi tên dài thêm chữ
-              'cancel',     // Gạch chéo rút gọn phân số (\cancel{x})
-              'physics',    // Đạo hàm, tích phân, vector, ma trận vật lý cực nhanh (\dd, \pdv)
-              'unicode',    // Hỗ trợ render các ký tự Unicode đặc biệt
-              'color',      // Tô màu chữ và nền (\color{red})
-              'boldsymbol', // In đậm các ký hiệu toán học (\boldsymbol{\alpha})
-              'cases',      // Hệ phương trình chuẩn
-              'empheq'      // Đóng khung hệ phương trình
-            ] 
+              'mhchem',     // Hóa học (\ce)
+              'ams',        // Ký hiệu Toán học chuẩn & môi trường cases
+              'mathtools',  // Mở rộng của ams (\underbracket, mũi tên...)
+              'extpfeil',   // Mũi tên dài
+              'cancel',     // Gạch chéo rút gọn
+              'physics',    // Vi tích phân, vector, ma trận
+              'unicode',    // Ký tự đặc biệt
+              'color',      // Tô màu chữ
+              'boldsymbol', // In đậm toán học
+              'enclose',    // Hỗ trợ các khung vẽ của MathLive
+              'noerrors',   // Ẩn lỗi chữ đỏ khi gõ sai lệnh
+              'noundefined' // Xử lý êm macro lạ
+            ]
           } 
         },
         svg: { 
@@ -55,7 +56,7 @@
         React container div. 
     -->
     <div id="tridentmessage" style="display: none; padding: 10;">
-        This add-in will not run in your version of Office. Please upgrade either to perpetual Office 2021 (or later) 
+        This add-in will not run in your version of Office. Please upgrade either to perpetual Office 2016 (or later) 
         or to a Microsoft 365 account.
     </div>
     <script>

@@ -1,13 +1,13 @@
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
 //import { DefaultButton, Stack, Label } from "@fluentui/react";
-// Sửa lại dòng import này
 import { DefaultButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle } from "@fluentui/react";
 
 import { MathfieldElement } from "mathlive";
 import "mathlive";
 import MathPalette from "./MathPalette";
 import { customInlineShortcuts, customMacros } from "./mathShortcuts";
+import { unsupportedMathMlCommands } from "./unsupportedCommands";
 
 // Đảm bảo load Font nội bộ chuẩn xác
 MathfieldElement.fontsDirectory = "./fonts";
@@ -24,10 +24,19 @@ export default function App({ title }: AppProps) {
   // THÊM BIẾN TRẠNG THÁI LƯU CHẾ ĐỘ CHÈN
   const [insertMode, setInsertMode] = useState<string>("mathml");
 
+  // Kiểm tra xem currentLatex có chứa bất kỳ chuỗi nào trong danh sách cấm hay không
+  const isUnsupported = unsupportedMathMlCommands.some(cmd => currentLatex.includes(cmd));
+  // Tự động gạt công tắc sang "Ảnh" nếu phát hiện lệnh cấm
+  useEffect(() => {
+    if (isUnsupported && insertMode === "mathml") {
+      setInsertMode("svg");
+    }
+  }, [isUnsupported, insertMode]);
+
   // ĐỊNH NGHĨA 2 LỰA CHỌN CHO NGƯỜI DÙNG
   const modeOptions: IChoiceGroupOption[] = [
     { key: "mathml", text: "Mã MathML" },
-    { key: "svg", text: "Ảnh SVG" }
+    { key: "svg", text: "Ảnh" }
   ];
 
 
@@ -270,7 +279,7 @@ export default function App({ title }: AppProps) {
 
     }
 
-    // Lắng nghe: Cứ mỗi khi anh bôi đen hay click chuột trong Word, gọi hàm Đọc ngược!
+    // Lắng nghe khi bôi đen hay click chuột trong Word, gọi hàm Đọc ngược!
     const selectionHandler = async () => {
       await handleReadEquation();
     };
@@ -298,11 +307,11 @@ export default function App({ title }: AppProps) {
   return (
     <div title={title} style={{ padding: "12px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
       <Stack tokens={{ childrenGap: 12 }}>
-
+        {/*
         <Label style={{ fontSize: "18px", fontWeight: "bold", color: "#107c41" }}>
           {title} - Công cụ Toán học
         </Label>
-
+        */}
         <MathPalette onInsert={insertSymbol} />
 
         <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
@@ -310,7 +319,7 @@ export default function App({ title }: AppProps) {
 
         {/* Ô CODE ĐỒNG BỘ 2 CHIỀU */}
         <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
-          <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>Mã hệ thống (LaTeX):</Label>
+          <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
           <textarea
             value={currentLatex}
             onChange={(e) => {
@@ -326,17 +335,27 @@ export default function App({ title }: AppProps) {
         </div>
 
         {/* NÚT CHỌN ĐỊNH DẠNG CHÈN */}
-        <Toggle
-          label="Chế độ chèn:"
-          inlineLabel
-          onText="Ảnh"
-          offText="Mã MathML"
-          checked={insertMode === "svg"} // Nếu đang là svg thì nút bật sang phải
-          onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
-          styles={{ root: { marginTop: "10px", marginBottom: "10px" } }}
-        />
+        <div>
+          <Toggle
+            label="Mode:"
+            inlineLabel
+            onText={isUnsupported ? "Image (Only)" : "Image"}
+            offText="MathML"
+            checked={insertMode === "svg"}
+            onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
+            disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ
+            styles={{ root: { marginTop: "10px", marginBottom: isUnsupported ? "4px" : "10px" } }}
+          />
+          
+          {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
+          {isUnsupported && (
+            <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
+              ⚠️ Công thức này chứa mã lệnh không hỗ trợ MathML.
+            </Label>
+          )}
+        </div>
 
-        {/* NÚT CHÈN MẠNH MẼ */}
+        {/* NÚT CHÈN */}
         <DefaultButton
           primary
           text="Chèn / Cập nhật"

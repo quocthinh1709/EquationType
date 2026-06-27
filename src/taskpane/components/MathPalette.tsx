@@ -72,11 +72,39 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
             aria-label="Math Palette Full"
             styles={{
                 root: {
-                    marginBottom: "10px",
+                    // =====================================
+                    // 1. CHỈ CUỘN NGANG DÀNH CHO THANH TAB
+                    // =====================================
                     overflowX: "auto",
                     overflowY: "hidden",
-                    whiteSpace: "nowrap",
-                    paddingBottom: "8px"
+                    whiteSpace: "nowrap", // Giữ các tab trên 1 hàng
+                    marginBottom: "10px",
+                    paddingBottom: "6px", // Tạo không gian để thanh cuộn không đè lên chữ
+                    
+                    // =====================================
+                    // 2. TRANG TRÍ THANH CUỘN HIỆN ĐẠI (NHỎ & BO TRÒN)
+                    // =====================================
+                    selectors: {
+                        "&::-webkit-scrollbar": { 
+                            height: "6px" // Độ mỏng của thanh cuộn ngang
+                        },
+                        "&::-webkit-scrollbar-thumb": { 
+                            backgroundColor: "#c8c6c4", // Màu xám nhạt thanh lịch
+                            borderRadius: "10px"        // Bo tròn hai đầu
+                        },
+                        "&::-webkit-scrollbar-thumb:hover": {
+                            backgroundColor: "#a19f9d"  // Đậm hơn một chút khi người dùng rê chuột vào
+                        },
+                        "&::-webkit-scrollbar-track": {
+                            background: "transparent"   // Ẩn nền rãnh trượt để trông gọn gàng
+                        }
+                    }
+                },
+                itemContainer: {
+                    // =====================================
+                    // 3. ĐẢM BẢO CÁC NÚT DƯỚI TỰ ĐỘNG XUỐNG DÒNG
+                    // =====================================
+                    whiteSpace: "normal" 
                 },
                 link: { fontSize: "14px", fontWeight: "600", color: "#201f1e" },
                 linkIsSelected: { fontSize: "14px", fontWeight: "bold", color: "#107c41" }
@@ -201,7 +229,8 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     <DefaultButton text="⇌" style={btnStyle} onClick={() => onInsert("\\rightleftharpoons ")} title="Phản ứng thuận nghịch" />
                     <DefaultButton text="↑" style={btnStyle} onClick={() => onInsert("\\uparrow ")} title="Bay hơi" />
                     <DefaultButton text="↓" style={btnStyle} onClick={() => onInsert("\\downarrow ")} title="Kết tủa" />
-                    <DefaultButton text="t°" style={btnStyle} onClick={() => onInsert("\\xrightarrow{t^{\\circ}} ")} title="Phản ứng cần nhiệt độ" />
+                    <MathBtn displayLatex="\text{t}\degree" insertLatex="\text{t}\degree" title="Nhiệt độ" onInsert={onInsert} />
+                    <MathBtn displayLatex="\overset{\text{t}\degree}{\rightarrow}" insertLatex="\overset{\text{t}\degree}{\rightarrow}" title="Phản ứng cần nhiệt độ" onInsert={onInsert} />
                     <DefaultButton text="xt" style={btnStyle} onClick={() => onInsert("\\xrightarrow{\\text{xt}} ")} title="Phản ứng cần xúc tác" />
                     <DefaultButton text="e⁻" style={btnStyle} onClick={() => onInsert("e^{-}")} title="Electron" />
                     <DefaultButton text="A_Z X" style={btnStyle} onClick={() => onInsert("\\ce{^{#?}_{#?}#?}")} title="Ký hiệu nguyên tử / Đồng vị" />

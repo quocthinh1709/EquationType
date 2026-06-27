@@ -41,7 +41,7 @@ export const customMacros = {
     "phanso": "\\frac{#0}{#?}",
     "vecto": "\\vec{#0}",
     "canbachai": "\\sqrt{#0}",
-    
+   
     // Logic, toán tử
     "td": "\\Leftrightarrow ",
     "suyra": "\\Rightarrow ",
