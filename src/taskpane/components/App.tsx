@@ -40,6 +40,7 @@ export default function App({ title }: AppProps) {
   ];
 
 
+
   // ==========================================
   // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN (KHI BÔI ĐEN/CLICK)
   // ==========================================
@@ -100,10 +101,11 @@ export default function App({ title }: AppProps) {
 
     let mathWidthEx = 0;
     let mathHeightEx = 0;
-    let verticalAlignEx = 0; // <--- THÊM BIẾN NÀY
+    let verticalAlignEx = 0; // 
 
     if (insertMode === "mathml") {
-      // ... (Phần MathML của bạn đã ổn, giữ nguyên)
+      // ... (Phần MathML
+      
       const hiddenDiv = document.createElement("div");
       hiddenDiv.style.display = "none";
       document.body.appendChild(hiddenDiv);
@@ -113,6 +115,7 @@ export default function App({ title }: AppProps) {
       const mathML = tempMf.getValue("math-ml" as any);
       document.body.removeChild(hiddenDiv);
       insertContent = mathML.includes("<math") ? mathML : `<math xmlns="http://www.w3.org/1998/Math/MathML">${mathML}</math>`;
+      
     } else {
       // [B] CHỌN SVG CẢI TIẾN
       try {
@@ -305,7 +308,7 @@ export default function App({ title }: AppProps) {
   };
 
   return (
-    <div title={title} style={{ padding: "12px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
+    <div title={title} style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
       <Stack tokens={{ childrenGap: 12 }}>
         {/*
         <Label style={{ fontSize: "18px", fontWeight: "bold", color: "#107c41" }}>
@@ -350,7 +353,7 @@ export default function App({ title }: AppProps) {
           {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
           {isUnsupported && (
             <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
-              ⚠️ Công thức này chứa mã lệnh không hỗ trợ MathML.
+              ⚠️ Công thức này không được Office Math hỗ trợ. Chế độ chèn ảnh sẽ được sử dụng.
             </Label>
           )}
         </div>

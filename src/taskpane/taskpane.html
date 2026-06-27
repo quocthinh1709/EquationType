@@ -15,6 +15,7 @@
     
     <script>
       window.MathJax = {
+        loader: { load: ['output/svg'] },
         tex: { 
           // Bổ sung hàng loạt các gói mạnh mẽ nhất của TeX
           packages: {
@@ -25,9 +26,7 @@
               'extpfeil',   // Mũi tên dài
               'cancel',     // Gạch chéo rút gọn
               'physics',    // Vi tích phân, vector, ma trận
-              'unicode',    // Ký tự đặc biệt
               'color',      // Tô màu chữ
-              'boldsymbol', // In đậm toán học
               'enclose',    // Hỗ trợ các khung vẽ của MathLive
               'noerrors',   // Ẩn lỗi chữ đỏ khi gõ sai lệnh
               'noundefined' // Xử lý êm macro lạ
@@ -35,7 +34,7 @@
           } 
         },
         svg: { 
-          fontCache: 'local' // Giữ nguyên, giúp tối ưu tái sử dụng font
+          fontCache: 'none' // Giữ nguyên, giúp tối ưu tái sử dụng font
         },
         startup: { 
           typeset: false // Giữ nguyên, rất quan trọng để tránh lỗi tự động render

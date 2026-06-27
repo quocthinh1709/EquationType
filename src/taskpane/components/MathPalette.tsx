@@ -1,62 +1,85 @@
 import * as React from "react";
 import { DefaultButton, Stack, Pivot, PivotItem } from "@fluentui/react";
 
+export const PaletteColors = {
+    office: "#107c41", // 
+    latex: "#f5b833", // Vàng chú ý
+    default: undefined  // Để mặc định của hệ thống
+};
+
 declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      "math-field": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        "read-only"?: boolean | string;
-      };
+    namespace JSX {
+        interface IntrinsicElements {
+            "math-field": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+                "read-only"?: boolean | string;
+            };
+        }
     }
-  }
 }
 // Hàm tạo nút bấm chứa công thức hiển thị trực quan
-// Hàm tạo nút bấm chứa công thức hiển thị trực quan (Đã fix lỗi click và kích thước)
-const MathBtn = ({ displayLatex, insertLatex, title, onInsert }: { displayLatex: string, insertLatex: string, title: string, onInsert: (l: string) => void }) => {
-    
-    // 1. Đồng bộ kích thước chuẩn 42px như tất cả các nút DefaultButton khác
-    const btnStyle = { 
-        minWidth: "42px", 
-        height: "42px", 
-        padding: "0", 
-        position: "relative" as any // Cần relative để làm chuẩn cho lớp kính tàng hình
-    }; 
-    
+const MathBtn = ({
+    displayLatex,
+    insertLatex,
+    title,
+    onInsert,
+    borderColor // Không để giá trị mặc định ở đây để ưu tiên dùng style mặc định
+}: {
+    displayLatex: string,
+    insertLatex: string,
+    title: string,
+    onInsert: (l: string) => void,
+    borderColor?: string
+}) => {
+
+    // Nếu không truyền borderColor, border sẽ là null (hoặc bỏ qua) để dùng kiểu dáng mặc định của DefaultButton
+    const btnStyle = {
+        minWidth: "40px",
+        height: "40px",
+        padding: "0",
+        position: "relative" as any,
+        // Nếu có borderColor thì mới vẽ viền, không thì để mặc định
+        border: borderColor ? `1.4px solid ${borderColor}` : undefined,
+        backgroundColor: "transparent",
+        borderRadius: "5px"
+    };
+
     return (
-        <DefaultButton style={btnStyle} onClick={() => onInsert(insertLatex)} title={title}>
-            
-            {/* 2. LỚP KÍNH TÀNG HÌNH: Hứng trọn cú click chuột, bảo vệ không cho math-field nuốt sự kiện */}
-            <div 
-                style={{ 
-                    position: "absolute", 
-                    top: 0, left: 0, right: 0, bottom: 0, 
-                    zIndex: 10, 
-                    cursor: "pointer" 
-                }} 
+        <DefaultButton
+            style={btnStyle}
+            onClick={() => onInsert(insertLatex)}
+            title={title}
+            onRenderDescription={() => null}
+        >
+            <div
+                style={{
+                    position: "absolute",
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 10,
+                    cursor: "pointer"
+                }}
             />
-            
-            {/* 3. Khung hiển thị công thức */}
-            <math-field 
-                read-only 
-                style={{ 
-                    pointerEvents: "none", 
-                    border: "none", 
-                    background: "transparent", 
-                    padding: 0, 
+
+            <math-field
+                read-only
+                style={{
+                    pointerEvents: "none",
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
                     margin: 0,
                     minHeight: "auto",
-                    fontSize: "18px", // Ép cỡ chữ nhỏ lại một chút để vừa khít ô 42px
-                    outline: "none"
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    outline: "none",
+                    // Màu chữ cố định là màu mặc định (không ép theo màu viền nữa)
+                    color: "inherit"
                 }}
             >
                 {displayLatex}
             </math-field>
-
         </DefaultButton>
     );
 };
-
-
 
 
 export interface MathPaletteProps {
@@ -66,233 +89,333 @@ export interface MathPaletteProps {
 export default function MathPalette({ onInsert }: MathPaletteProps) {
     // Kích thước chuẩn cho nút bấm để vừa vặn các biểu tượng lớn
     const btnStyle = { minWidth: "42px", height: "42px", fontSize: "16px", padding: "0" };
+    const pivotWrapperRef = React.useRef<HTMLDivElement>(null);
+    const scrollTabs = (direction: 'left' | 'right') => {
+        if (pivotWrapperRef.current) {
+            const tabList = pivotWrapperRef.current.querySelector('[role="tablist"]');
+            if (tabList) {
+                const scrollAmount = 250;
+                (tabList as HTMLElement).scrollBy({
+                    left: direction === 'left' ? -scrollAmount : scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    };
 
     return (
-        <Pivot
-            aria-label="Math Palette Full"
-            styles={{
-                root: {
-                    // =====================================
-                    // 1. CHỈ CUỘN NGANG DÀNH CHO THANH TAB
-                    // =====================================
-                    overflowX: "auto",
-                    overflowY: "hidden",
-                    whiteSpace: "nowrap", // Giữ các tab trên 1 hàng
-                    marginBottom: "10px",
-                    paddingBottom: "6px", // Tạo không gian để thanh cuộn không đè lên chữ
-                    
-                    // =====================================
-                    // 2. TRANG TRÍ THANH CUỘN HIỆN ĐẠI (NHỎ & BO TRÒN)
-                    // =====================================
-                    selectors: {
-                        "&::-webkit-scrollbar": { 
-                            height: "6px" // Độ mỏng của thanh cuộn ngang
-                        },
-                        "&::-webkit-scrollbar-thumb": { 
-                            backgroundColor: "#c8c6c4", // Màu xám nhạt thanh lịch
-                            borderRadius: "10px"        // Bo tròn hai đầu
-                        },
-                        "&::-webkit-scrollbar-thumb:hover": {
-                            backgroundColor: "#a19f9d"  // Đậm hơn một chút khi người dùng rê chuột vào
-                        },
-                        "&::-webkit-scrollbar-track": {
-                            background: "transparent"   // Ẩn nền rãnh trượt để trông gọn gàng
+        // =====================================
+        // 2. KHUNG BAO NGOÀI (Đã gỡ bỏ onWheel)
+        // =====================================
+        <div ref={pivotWrapperRef} style={{ position: "relative", marginBottom: "10px" }}>
+
+            {/* NÚT BÊN TRÁI */}
+            <DefaultButton
+                onClick={() => scrollTabs('left')}
+                style={{
+                    position: "absolute", top: 0, left: 0, zIndex: 10,
+                    minWidth: "32px", width: "32px", height: "44px", padding: 0,
+                    border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold"
+                }}
+                title="Cuộn sang trái"
+            >
+                ❮
+            </DefaultButton>
+
+            {/* NÚT BÊN PHẢI */}
+            <DefaultButton
+                onClick={() => scrollTabs('right')}
+                style={{
+                    position: "absolute", top: 0, right: 0, zIndex: 10,
+                    minWidth: "32px", width: "32px", height: "44px", padding: 0,
+                    border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold"
+                }}
+                title="Cuộn sang phải"
+            >
+                ❯
+            </DefaultButton>
+
+            {/* ===================================== */}
+            {/* 3. KHUNG PIVOT (Dùng cuộn nguyên bản của trình duyệt) */}
+            {/* ===================================== */}
+            <Pivot
+                aria-label="Math Palette Full"
+                styles={{
+                    root: {
+                        overflowX: "auto", // Mở khóa tính năng cuộn nguyên bản (Vuốt Touchpad, Shift + Cuộn)
+                        whiteSpace: "nowrap",
+                        paddingLeft: "32px", // Chừa chỗ cho nút trái
+                        paddingRight: "32px", // Chừa chỗ cho nút phải
+
+                        // Tàng hình thanh trượt xám xịt
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                        selectors: {
+                            "&::-webkit-scrollbar": { display: "none" }
                         }
-                    }
-                },
-                itemContainer: {
-                    // =====================================
-                    // 3. ĐẢM BẢO CÁC NÚT DƯỚI TỰ ĐỘNG XUỐNG DÒNG
-                    // =====================================
-                    whiteSpace: "normal" 
-                },
-                link: { fontSize: "14px", fontWeight: "600", color: "#201f1e" },
-                linkIsSelected: { fontSize: "14px", fontWeight: "bold", color: "#107c41" }
-            }}
-        >
+                    },
+                    itemContainer: {
+                        whiteSpace: "normal", // Đảm bảo các nút ở dưới không bị lỗi ngang
+                        paddingTop: "5px"
+                    },
+                    link: { fontSize: "14px", fontWeight: "600", color: "#201f1e" },
+                    linkIsSelected: { fontSize: "14px", fontWeight: "bold", color: "#107c41" }
+                }}
+            >
 
-            {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
-            <PivotItem headerText="Đại số">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="■/□" style={btnStyle} onClick={() => onInsert("\\frac{#0}{#?}")} title="Phân số" />
-                    <DefaultButton text="√■" style={btnStyle} onClick={() => onInsert("\\sqrt{#0}")} title="Căn bậc 2" />
-                    <DefaultButton text="ⁿ√■" style={btnStyle} onClick={() => onInsert("\\sqrt[#?]{#0}")} title="Căn bậc n" />
-                    <DefaultButton text="■²" style={btnStyle} onClick={() => onInsert("^{#?}")} title="Lũy thừa / Superscript" />
-                    <DefaultButton text="■_n" style={btnStyle} onClick={() => onInsert("_{#?}")} title="Chỉ số dưới / Subscript" />
-                    <DefaultButton text="|■|" style={btnStyle} onClick={() => onInsert("\\left|#0\\right|")} title="Trị tuyệt đối" />
-                    <DefaultButton text="±" style={btnStyle} onClick={() => onInsert("\\pm ")} title="Cộng trừ" />
-                    <DefaultButton text="∓" style={btnStyle} onClick={() => onInsert("\\mp ")} title="Trừ cộng" />
-                    <DefaultButton text="×" style={btnStyle} onClick={() => onInsert("\\times ")} title="Dấu nhân" />
-                    <DefaultButton text="÷" style={btnStyle} onClick={() => onInsert("\\div ")} title="Dấu chia" />
-                    <DefaultButton text="·" style={btnStyle} onClick={() => onInsert("\\cdot ")} title="Dấu chấm nhân" />
-                    <DefaultButton text="A̅" style={btnStyle} onClick={() => onInsert("\\overline{#0}")} title="Gạch đầu (Overline)" />
-                    <DefaultButton text="A̲" style={btnStyle} onClick={() => onInsert("\\underline{#0}")} title="Gạch dưới (Underline)" />
-                </Stack>
-            </PivotItem>
+                {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
+                <PivotItem headerText="Đại số">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\frac{#0}{#?}" insertLatex="\frac{#0}{#?}" title="\frac" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="{#0}/{#?}" insertLatex="{#0}/{#?}" title="/" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqrt{#0}" insertLatex="\sqrt{#0}" title="\sqrt" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqrt[#?]{#0}" insertLatex="\sqrt[#?]{#0}" title="\sqrt[n]" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="{#?}^{#?}" insertLatex="{#0}^{#?}" title="^{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="{#0}_{#?}" insertLatex="{#0}_{#?}" title="_{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\left|#0\right|" insertLatex="\left|#0\right|" title="\left|\right|" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\pm" insertLatex="\pm " title="\pm" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\mp" insertLatex="\mp " title="\mp" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\times" insertLatex="\times " title="\times" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\div" insertLatex="\div " title="\div" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cdot" insertLatex="\cdot " title="\cdot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\overline{#0}" insertLatex="\overline{#0}" title="\overline" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\underline{#0}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 2: TOÁN TỬ & LOGIC */}
-            <PivotItem headerText="Toán tử & Logic">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="≠" style={btnStyle} onClick={() => onInsert("\\neq ")} title="Khác" />
-                    <DefaultButton text="≈" style={btnStyle} onClick={() => onInsert("\\approx ")} title="Xấp xỉ" />
-                    <DefaultButton text="≡" style={btnStyle} onClick={() => onInsert("\\equiv ")} title="Đồng dư / Tương đương" />
-                    <DefaultButton text="≤" style={btnStyle} onClick={() => onInsert("\\le ")} title="Nhỏ hơn hoặc bằng" />
-                    <DefaultButton text="≥" style={btnStyle} onClick={() => onInsert("\\ge ")} title="Lớn hơn hoặc bằng" />
-                    <DefaultButton text="∀" style={btnStyle} onClick={() => onInsert("\\forall ")} title="Mọi" />
-                    <DefaultButton text="∃" style={btnStyle} onClick={() => onInsert("\\exists ")} title="Tồn tại" />
-                    <DefaultButton text="∄" style={btnStyle} onClick={() => onInsert("\\nexists ")} title="Không tồn tại" />
-                    <DefaultButton text="∴" style={btnStyle} onClick={() => onInsert("\\therefore ")} title="Suy ra (Kết luận)" />
-                    <DefaultButton text="∵" style={btnStyle} onClick={() => onInsert("\\because ")} title="Bởi vì (Giải thích)" />
-                    <DefaultButton text="∧" style={btnStyle} onClick={() => onInsert("\\land ")} title="Và (AND)" />
-                    <DefaultButton text="∨" style={btnStyle} onClick={() => onInsert("\\lor ")} title="Hoặc (OR)" />
-                    <DefaultButton text="¬" style={btnStyle} onClick={() => onInsert("\\neg ")} title="Phủ định (NOT)" />
-                </Stack>
-            </PivotItem>
+                {/* TAB 2: TOÁN TỬ & LOGIC */}
+                <PivotItem headerText="Toán tử & Logic">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\neq" insertLatex="\neq " title="\neq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\approx" insertLatex="\approx " title="\approx" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\equiv" insertLatex="\equiv " title="\equiv" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\le" insertLatex="\le " title="\le" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ge" insertLatex="\ge " title="\ge" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\forall" insertLatex="\forall " title="\forall" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\exists" insertLatex="\exists " title="\exists" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nexists" insertLatex="\nexists " title="\nexists" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\therefore" insertLatex="\therefore " title="\therefore" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\because" insertLatex="\because " title="\because" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\land" insertLatex="\land " title="\land" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\lor" insertLatex="\lor " title="\lor" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\neg" insertLatex="\neg " title="\neg" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 3: TẬP HỢP */}
-            <PivotItem headerText="Tập hợp">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="∈" style={btnStyle} onClick={() => onInsert("\\in ")} title="Thuộc" />
-                    <DefaultButton text="∉" style={btnStyle} onClick={() => onInsert("\\notin ")} title="Không thuộc" />
-                    <DefaultButton text="⊂" style={btnStyle} onClick={() => onInsert("\\subset ")} title="Tập con thực sự" />
-                    <DefaultButton text="⊆" style={btnStyle} onClick={() => onInsert("\\subseteq ")} title="Tập con hoặc bằng" />
-                    <DefaultButton text="⊃" style={btnStyle} onClick={() => onInsert("\\supset ")} title="Chứa tập con" />
-                    <DefaultButton text="∪" style={btnStyle} onClick={() => onInsert("\\cup ")} title="Hợp" />
-                    <DefaultButton text="∩" style={btnStyle} onClick={() => onInsert("\\cap ")} title="Giao" />
-                    <DefaultButton text="∖" style={btnStyle} onClick={() => onInsert("\\setminus ")} title="Hiệu hai tập hợp" />
-                    <DefaultButton text="∅" style={btnStyle} onClick={() => onInsert("\\emptyset ")} title="Tập rỗng" />
-                    <DefaultButton text="ℝ" style={btnStyle} onClick={() => onInsert("\\mathbb{R}")} title="Tập số thực" />
-                    <DefaultButton text="ℕ" style={btnStyle} onClick={() => onInsert("\\mathbb{N}")} title="Tập số tự nhiên" />
-                    <DefaultButton text="ℤ" style={btnStyle} onClick={() => onInsert("\\mathbb{Z}")} title="Tập số nguyên" />
-                    <DefaultButton text="ℚ" style={btnStyle} onClick={() => onInsert("\\mathbb{Q}")} title="Tập số hữu tỉ" />
-                </Stack>
-            </PivotItem>
+                {/* TAB 3: TẬP HỢP */}
+                <PivotItem headerText="Tập hợp">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\in" insertLatex="\in " title="\in" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\notin" insertLatex="\notin " title="\notin" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\subset" insertLatex="\subset " title="\subset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\subseteq" insertLatex="\subseteq " title="\subseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\supset" insertLatex="\supset " title="\supset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\cup" insertLatex="\cup " title="\cup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\cap" insertLatex="\cap " title="\cap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\setminus" insertLatex="\setminus " title="\setminus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\emptyset" insertLatex="\emptyset " title="\emptyset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\mathbb{R}" insertLatex="\mathbb{R}" title="\mathbb{R}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\mathbb{N}" insertLatex="\mathbb{N}" title="\mathbb{N}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\mathbb{Z}" insertLatex="\mathbb{Z}" title="\mathbb{Z}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    <MathBtn displayLatex="\mathbb{Q}" insertLatex="\mathbb{Q}" title="\mathbb{Q}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 4: GIẢI TÍCH */}
-            <PivotItem headerText="Giải tích">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="∫" style={btnStyle} onClick={() => onInsert("\\int_{#0}^{#1}")} title="Tích phân" />
-                    <DefaultButton text="∬" style={btnStyle} onClick={() => onInsert("\\iint ")} title="Tích phân kép" />
-                    <DefaultButton text="∮" style={btnStyle} onClick={() => onInsert("\\oint ")} title="Tích phân đường" />
-                    <DefaultButton text="lim" style={btnStyle} onClick={() => onInsert("\\lim_{#? \\to #?}")} title="Giới hạn" />
-                    <DefaultButton text="∑" style={btnStyle} onClick={() => onInsert("\\sum_{#?}^{#?}")} title="Tổng Sigma" />
-                    <DefaultButton text="∏" style={btnStyle} onClick={() => onInsert("\\prod_{#?}^{#?}")} title="Tích Pi" />
-                    <DefaultButton text="∞" style={btnStyle} onClick={() => onInsert("\\infty")} title="Vô cực" />
-                    <DefaultButton text="d/dx" style={btnStyle} onClick={() => onInsert("\\frac{d}{dx} #0")} title="Đạo hàm" />
-                    <DefaultButton text="∂</text" style={btnStyle} onClick={() => onInsert("\\partial ")} title="Đạo hàm riêng" />
-                    <DefaultButton text="∇" style={btnStyle} onClick={() => onInsert("\\nabla ")} title="Nabla / Gradient" />
-                    <DefaultButton text="!" style={btnStyle} onClick={() => onInsert("! ")} title="Giai thừa" />
-                </Stack>
-            </PivotItem>
+                {/* TAB 4: GIẢI TÍCH */}
+                <PivotItem headerText="Giải tích">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\int_{#0}^{#1}" insertLatex="\int_{#0}^{#1}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\oint" insertLatex="\oint" title="\oint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\lim_{#? \to #?}" insertLatex="\lim_{#? \to #?}" title="\lim" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sum" insertLatex="\sum_{#?}^{#?}" title="\sum" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\prod" insertLatex="\prod_{#?}^{#?}" title="\prod" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\infty" insertLatex="\infty" title="\infty" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\frac{d}{dx}" insertLatex="\frac{d}{dx} #0" title="\frac{d}{dx}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\partial" insertLatex="\partial " title="\partial" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nabla" insertLatex="\nabla " title="\nabla" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="!" insertLatex="! " title="!" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 5: HỆ & MA TRẬN */}
-            <PivotItem headerText="Hệ & Ma trận">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="{ Hệ 2" style={btnStyle} onClick={() => onInsert("\\begin{cases} #? &= #? \\\\ #? &= #? \\end{cases}")} title="Hệ 2 phương trình (căn chỉnh thẳng =)" />
-                    <DefaultButton text="{ Hệ 3" style={btnStyle} onClick={() => onInsert("\\begin{cases} #? &= #? \\\\ #? &= #? \\\\ #? &= #? \\end{cases}")} title="Hệ 3 phương trình (căn chỉnh thẳng =)" />
-                    <DefaultButton text="[ Hoặc" style={btnStyle} onClick={() => onInsert("\\left[ \\begin{array}{l} #? \\\\ #? \\end{array} \\right.")} title="Ngoặc vuông (Hoặc / Tuyển)" />
-                    <DefaultButton text="f(x)" style={btnStyle} onClick={() => onInsert("f(x) = \\begin{cases} #?, & \\text{nếu } #? \\\\ #?, & \\text{nếu } #? \\end{cases}")} title="Hàm số cho bởi nhiều công thức" />
-                    <DefaultButton text="(■)" style={btnStyle} onClick={() => onInsert("\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}")} title="Ma trận tròn 2x2" />
-                    <DefaultButton text="[■]" style={btnStyle} onClick={() => onInsert("\\begin{bmatrix} #? & #? \\\\ #? & #? \\end{bmatrix}")} title="Ma trận vuông 2x2" />
-                    <DefaultButton text="|■|" style={btnStyle} onClick={() => onInsert("\\begin{vmatrix} #? & #? \\\\ #? & #? \\end{vmatrix}")} title="Định thức 2x2" />
-                    <DefaultButton text="[⋮]" style={btnStyle} onClick={() => onInsert("\\begin{bmatrix} #? \\\\ #? \\\\ #? \\end{bmatrix}")} title="Vector cột 3x1" />
-                    <DefaultButton text="⋯" style={btnStyle} onClick={() => onInsert("\\cdots ")} title="Chấm ngang giữa" />
-                    <DefaultButton text="⋮" style={btnStyle} onClick={() => onInsert("\\vdots ")} title="Chấm dọc" />
-                    <DefaultButton text="⋱" style={btnStyle} onClick={() => onInsert("\\ddots ")} title="Chấm chéo" />
-                </Stack>
-            </PivotItem>
+                {/* TAB 5: HỆ & MA TRẬN */}
+                <PivotItem headerText="Hệ & Ma trận">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <DefaultButton text="{ Hệ 2" style={btnStyle} onClick={() => onInsert("\\begin{cases} #? &= #? \\\\ #? &= #? \\end{cases}")} title="Hệ 2 phương trình (căn chỉnh thẳng =)" />
+                        <DefaultButton text="{ Hệ 3" style={btnStyle} onClick={() => onInsert("\\begin{cases} #? &= #? \\\\ #? &= #? \\\\ #? &= #? \\end{cases}")} title="Hệ 3 phương trình (căn chỉnh thẳng =)" />
+                        <DefaultButton text="[ Hoặc" style={btnStyle} onClick={() => onInsert("\\left[ \\begin{array}{l} #? \\\\ #? \\end{array} \\right.")} title="Ngoặc vuông (Hoặc / Tuyển)" />
+                        <DefaultButton text="f(x)" style={btnStyle} onClick={() => onInsert("f(x) = \\begin{cases} #?, & \\text{nếu } #? \\\\ #?, & \\text{nếu } #? \\end{cases}")} title="Hàm số cho bởi nhiều công thức" />
+                        <DefaultButton text="(■)" style={btnStyle} onClick={() => onInsert("\\begin{pmatrix} #? & #? \\\\ #? & #? \\end{pmatrix}")} title="Ma trận tròn 2x2" />
+                        <DefaultButton text="[■]" style={btnStyle} onClick={() => onInsert("\\begin{bmatrix} #? & #? \\\\ #? & #? \\end{bmatrix}")} title="Ma trận vuông 2x2" />
+                        <DefaultButton text="|■|" style={btnStyle} onClick={() => onInsert("\\begin{vmatrix} #? & #? \\\\ #? & #? \\end{vmatrix}")} title="Định thức 2x2" />
+                        <DefaultButton text="[⋮]" style={btnStyle} onClick={() => onInsert("\\begin{bmatrix} #? \\\\ #? \\\\ #? \\end{bmatrix}")} title="Vector cột 3x1" />
+                        <DefaultButton text="⋯" style={btnStyle} onClick={() => onInsert("\\cdots ")} title="Chấm ngang giữa" />
+                        <DefaultButton text="⋮" style={btnStyle} onClick={() => onInsert("\\vdots ")} title="Chấm dọc" />
+                        <DefaultButton text="⋱" style={btnStyle} onClick={() => onInsert("\\ddots ")} title="Chấm chéo" />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 6: HÌNH & LƯỢNG GIÁC */}
-            <PivotItem headerText="Hình & Lượng giác">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="sin" style={btnStyle} onClick={() => onInsert("\\sin\\left(#?\\right)")} />
-                    <DefaultButton text="cos" style={btnStyle} onClick={() => onInsert("\\cos\\left(#?\\right)")} />
-                    <DefaultButton text="tan" style={btnStyle} onClick={() => onInsert("\\tan\\left(#?\\right)")} />
-                    <DefaultButton text="cot" style={btnStyle} onClick={() => onInsert("\\cot\\left(#?\\right)")} />
-                    <DefaultButton text="π" style={btnStyle} onClick={() => onInsert("\\pi ")} title="Pi" />
-                    <DefaultButton text="°" style={btnStyle} onClick={() => onInsert("^{\\circ}")} title="Độ" />
-                    <DefaultButton text="Δ" style={btnStyle} onClick={() => onInsert("\\triangle ")} title="Tam giác" />
-                    <DefaultButton text="∠" style={btnStyle} onClick={() => onInsert("\\angle ")} title="Góc" />
-                    <DefaultButton text="⊥" style={btnStyle} onClick={() => onInsert("\\perp ")} title="Vuông góc" />
-                    <DefaultButton text="∥" style={btnStyle} onClick={() => onInsert("\\parallel ")} title="Song song" />
-                    
-                    <MathBtn displayLatex="\vec{#?}" insertLatex="\vec{#0}" title="Vector" onInsert={onInsert} />
-                    <DefaultButton text="Â" style={btnStyle} onClick={() => onInsert("\\hat{#0}")} title="Góc trên đầu (ABC)" />
-                    <MathBtn displayLatex="\overset{\frown}{#0}" insertLatex="\overset{\frown}{#0}" title="Cung tròn" onInsert={onInsert} />
-                </Stack>
-            </PivotItem>
+                {/* TAB 6: HÌNH & LƯỢNG GIÁC */}
+                <PivotItem headerText="Hình & Lượng giác">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <DefaultButton text="sin" style={btnStyle} onClick={() => onInsert("\\sin\\left(#?\\right)")} />
+                        <DefaultButton text="cos" style={btnStyle} onClick={() => onInsert("\\cos\\left(#?\\right)")} />
+                        <DefaultButton text="tan" style={btnStyle} onClick={() => onInsert("\\tan\\left(#?\\right)")} />
+                        <DefaultButton text="cot" style={btnStyle} onClick={() => onInsert("\\cot\\left(#?\\right)")} />
+                        <DefaultButton text="π" style={btnStyle} onClick={() => onInsert("\\pi ")} title="Pi" />
+                        <DefaultButton text="°" style={btnStyle} onClick={() => onInsert("^{\\circ}")} title="Độ" />
+                        <DefaultButton text="Δ" style={btnStyle} onClick={() => onInsert("\\triangle ")} title="Tam giác" />
+                        <DefaultButton text="∠" style={btnStyle} onClick={() => onInsert("\\angle ")} title="Góc" />
+                        <DefaultButton text="⊥" style={btnStyle} onClick={() => onInsert("\\perp ")} title="Vuông góc" />
+                        <DefaultButton text="∥" style={btnStyle} onClick={() => onInsert("\\parallel ")} title="Song song" />
 
-            {/* TAB 7: LÝ & HÓA HỌC */}
-            <PivotItem headerText="Lý & Hóa học">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="→" style={btnStyle} onClick={() => onInsert("\\rightarrow ")} title="Phản ứng 1 chiều" />
-                    <DefaultButton text="⇌" style={btnStyle} onClick={() => onInsert("\\rightleftharpoons ")} title="Phản ứng thuận nghịch" />
-                    <DefaultButton text="↑" style={btnStyle} onClick={() => onInsert("\\uparrow ")} title="Bay hơi" />
-                    <DefaultButton text="↓" style={btnStyle} onClick={() => onInsert("\\downarrow ")} title="Kết tủa" />
-                    <MathBtn displayLatex="\text{t}\degree" insertLatex="\text{t}\degree" title="Nhiệt độ" onInsert={onInsert} />
-                    <MathBtn displayLatex="\overset{\text{t}\degree}{\rightarrow}" insertLatex="\overset{\text{t}\degree}{\rightarrow}" title="Phản ứng cần nhiệt độ" onInsert={onInsert} />
-                    <DefaultButton text="xt" style={btnStyle} onClick={() => onInsert("\\xrightarrow{\\text{xt}} ")} title="Phản ứng cần xúc tác" />
-                    <DefaultButton text="e⁻" style={btnStyle} onClick={() => onInsert("e^{-}")} title="Electron" />
-                    <DefaultButton text="A_Z X" style={btnStyle} onClick={() => onInsert("\\ce{^{#?}_{#?}#?}")} title="Ký hiệu nguyên tử / Đồng vị" />
-                    <DefaultButton text="Ω" style={btnStyle} onClick={() => onInsert("\\Omega ")} title="Ohm" />
-                    <DefaultButton text="ω" style={btnStyle} onClick={() => onInsert("\\omega ")} title="Tần số góc (Omega)" />
-                    <DefaultButton text="λ" style={btnStyle} onClick={() => onInsert("\\lambda ")} title="Bước sóng (Lambda)" />
-                    <DefaultButton text="μ" style={btnStyle} onClick={() => onInsert("\\mu ")} title="Micro / Hệ số ma sát" />
-                    <DefaultButton text="Å" style={btnStyle} onClick={() => onInsert("\\text{\\AA}")} title="Angstrom" />
-                    <DefaultButton text="ħ" style={btnStyle} onClick={() => onInsert("\\hbar ")} title="Hằng số Planck thu gọn" />
-                </Stack>
-            </PivotItem>
+                        <MathBtn displayLatex="\vec{#?}" insertLatex="\vec{#0}" title="Vector" onInsert={onInsert} />
 
-            {/* TAB 8: MŨI TÊN */}
-            <PivotItem headerText="Mũi tên">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    <DefaultButton text="←" style={btnStyle} onClick={() => onInsert("\\leftarrow ")} />
-                    <DefaultButton text="→" style={btnStyle} onClick={() => onInsert("\\rightarrow ")} />
-                    <DefaultButton text="↔" style={btnStyle} onClick={() => onInsert("\\leftrightarrow ")} />
-                    <DefaultButton text="⇐" style={btnStyle} onClick={() => onInsert("\\Leftarrow ")} />
-                    <DefaultButton text="⇒" style={btnStyle} onClick={() => onInsert("\\Rightarrow ")} title="Kéo theo / Implies" />
-                    <DefaultButton text="⇔" style={btnStyle} onClick={() => onInsert("\\Leftrightarrow ")} title="Tương đương" />
-                    <DefaultButton text="↦" style={btnStyle} onClick={() => onInsert("\\mapsto ")} title="Ánh xạ" />
-                    <DefaultButton text="↗" style={btnStyle} onClick={() => onInsert("\\nearrow ")} />
-                    <DefaultButton text="↘" style={btnStyle} onClick={() => onInsert("\\searrow ")} />
-                    <DefaultButton text="↙" style={btnStyle} onClick={() => onInsert("\\swarrow ")} />
-                    <DefaultButton text="↖" style={btnStyle} onClick={() => onInsert("\\nwarrow ")} />
-                </Stack>
-            </PivotItem>
+                        <MathBtn displayLatex="\hat{#?}" insertLatex="\hat{#0}" title="Góc trên đầu (ABC)" onInsert={onInsert} borderColor={PaletteColors.office} />
+                        <MathBtn displayLatex="\widehat{#?}" insertLatex="\widehat{#0}" title="Góc trên đầu (ABC)" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\overset{\frown}{#0}" insertLatex="\overset{\frown}{#0}" title="Cung tròn" onInsert={onInsert} />
+                    </Stack>
+                </PivotItem>
 
-            {/* TAB 9: HY LẠP */}
-            <PivotItem headerText="Hy Lạp">
-                <Stack horizontal wrap tokens={{ childrenGap: 6 }} style={{ marginTop: 12 }}>
-                    {/* Chữ thường */}
-                    <DefaultButton text="α" style={btnStyle} onClick={() => onInsert("\\alpha ")} title="Alpha" />
-                    <DefaultButton text="β" style={btnStyle} onClick={() => onInsert("\\beta ")} title="Beta" />
-                    <DefaultButton text="γ" style={btnStyle} onClick={() => onInsert("\\gamma ")} title="Gamma" />
-                    <DefaultButton text="δ" style={btnStyle} onClick={() => onInsert("\\delta ")} title="Delta" />
-                    <DefaultButton text="ε" style={btnStyle} onClick={() => onInsert("\\varepsilon ")} title="Epsilon" />
-                    <DefaultButton text="θ" style={btnStyle} onClick={() => onInsert("\\theta ")} title="Theta" />
-                    <DefaultButton text="λ" style={btnStyle} onClick={() => onInsert("\\lambda ")} title="Lambda" />
-                    <DefaultButton text="μ" style={btnStyle} onClick={() => onInsert("\\mu ")} title="Mu" />
-                    <DefaultButton text="ν" style={btnStyle} onClick={() => onInsert("\\nu ")} title="Nu" />
-                    <DefaultButton text="π" style={btnStyle} onClick={() => onInsert("\\pi ")} title="Pi" />
-                    <DefaultButton text="ρ" style={btnStyle} onClick={() => onInsert("\\rho ")} title="Rho" />
-                    <DefaultButton text="σ" style={btnStyle} onClick={() => onInsert("\\sigma ")} title="Sigma" />
-                    <DefaultButton text="τ" style={btnStyle} onClick={() => onInsert("\\tau ")} title="Tau" />
-                    <DefaultButton text="φ" style={btnStyle} onClick={() => onInsert("\\varphi ")} title="Phi" />
-                    <DefaultButton text="ω" style={btnStyle} onClick={() => onInsert("\\omega ")} title="Omega" />
+                {/* TAB 7: LÝ & HÓA HỌC */}
+                <PivotItem headerText="Lý & Hóa học">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\rightarrow" insertLatex="\rightarrow " title="\rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightleftharpoons" insertLatex="\rightleftharpoons " title="\rightleftharpoons" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\uparrow" insertLatex="\uparrow " title="\uparrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\downarrow" insertLatex="\downarrow " title="\downarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="t^\circ" insertLatex="t^\circ" title="t^\circ" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\overset{t^\circ}{\rightarrow}" insertLatex="\overset{t^\circ}{\rightarrow}" title="\overset{t^\circ}{\rightarrow}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\xrightarrow{\text{xt}}" insertLatex="\xrightarrow{\text{xt}} " title="\xrightarrow{\text{xt}}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="e^{-}" insertLatex="e^{-}" title="e^{-}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="^{A}_{Z}X}" insertLatex="^{#?}_{#?}#?}" title="^{A}_{Z}X}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Omega" insertLatex="\Omega " title="\Omega" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\omega" insertLatex="\omega " title="\omega" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\lambda" insertLatex="\lambda " title="\lambda" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\mu" insertLatex="\mu " title="\mu" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\text{\AA}" insertLatex="\text{\AA}" title="\text{\AA}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\hbar" insertLatex="\hbar " title="\hbar" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
 
-                    {/* Chữ hoa */}
-                    <DefaultButton text="Γ" style={btnStyle} onClick={() => onInsert("\\Gamma ")} title="Gamma (Hoa)" />
-                    <DefaultButton text="Δ" style={btnStyle} onClick={() => onInsert("\\Delta ")} title="Delta (Hoa)" />
-                    <DefaultButton text="Θ" style={btnStyle} onClick={() => onInsert("\\Theta ")} title="Theta (Hoa)" />
-                    <DefaultButton text="Λ" style={btnStyle} onClick={() => onInsert("\\Lambda ")} title="Lambda (Hoa)" />
-                    <DefaultButton text="Π" style={btnStyle} onClick={() => onInsert("\\Pi ")} title="Pi (Hoa)" />
-                    <DefaultButton text="Σ" style={btnStyle} onClick={() => onInsert("\\Sigma ")} title="Sigma (Hoa)" />
-                    <DefaultButton text="Φ" style={btnStyle} onClick={() => onInsert("\\Phi ")} title="Phi (Hoa)" />
-                    <DefaultButton text="Ψ" style={btnStyle} onClick={() => onInsert("\\Psi ")} title="Psi (Hoa)" />
-                    <DefaultButton text="Ω" style={btnStyle} onClick={() => onInsert("\\Omega ")} title="Omega (Hoa)" />
-                </Stack>
-            </PivotItem>
+                {/* Accents*/}
+                <PivotItem headerText="Accents">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\bar{#?}" insertLatex="\bar{#0}" title="\bar" onInsert={onInsert} borderColor={PaletteColors.office} />
+                        <MathBtn displayLatex="\hat{#?}" insertLatex="\hat{#0}" title="\hat" onInsert={onInsert} borderColor={PaletteColors.office} />
+                        <MathBtn displayLatex="\widehat{#?}" insertLatex="\widehat{#0}" title="\widehat" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\tilde{#?}" insertLatex="\tilde{#0}" title="\tilde" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\vec{#?}" insertLatex="\vec{#0}" title="\vec" onInsert={onInsert} />
+                        <MathBtn displayLatex="\overline{#?}" insertLatex="\overline{#0}" title="\overline" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\underline{#?}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\overrightarrow{#?}" insertLatex="\overrightarrow{#0}" title="\overrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\underrightarrow{#?}" insertLatex="\underrightarrow{#0}" title="\underrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\overbrace{#?}" insertLatex="\overbrace{#0}" title="\overbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\underbrace{#?}" insertLatex="\underbrace{#0}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                    </Stack>
+                </PivotItem>
 
-        </Pivot>
+                {/* TAB 8: MŨI TÊN */}
+                <PivotItem headerText="Arrow">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\leftarrow" insertLatex="\leftarrow " title="\leftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightarrow" insertLatex="\rightarrow " title="\rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftrightarrow" insertLatex="\leftrightarrow " title="\leftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Leftarrow" insertLatex="\Leftarrow " title="\Leftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Rightarrow" insertLatex="\Rightarrow " title="\Rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Leftrightarrow" insertLatex="\Leftrightarrow " title="\Leftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\mapsto" insertLatex="\mapsto " title="\mapsto" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nearrow" insertLatex="\nearrow " title="\nearrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\searrow" insertLatex="\searrow " title="\searrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\swarrow" insertLatex="\swarrow " title="\swarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nwarrow" insertLatex="\nwarrow " title="\nwarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\xleftarrow{ab}" insertLatex="\xleftarrow{#0} " title="\xleftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xLeftarrow{ab}" insertLatex="\xLeftarrow{#0} " title="\xLeftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xRightarrow{ab}" insertLatex="\xRightarrow{#0} " title="\xRightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftrightarrow{ab}" insertLatex="\xleftrightarrow{#0} " title="\xleftrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xLeftrightarrow{ab}" insertLatex="\xLeftrightarrow{#0} " title="\xLeftrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftrightharpoons{ab}" insertLatex="\xleftrightharpoons{#0} " title="\xleftrightharpoons" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightleftharpoons{ab}" insertLatex="\xrightleftharpoons{#0} " title="\xrightleftharpoons" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xlongequal{ab}" insertLatex="\xlongequal{#0} " title="\xlongequal" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightarrow[xy]{ab}" insertLatex="xrightarrow[#0]{#?} " title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xmapsto{ab}" insertLatex="\xmapsto{#0} " title="\xmapsto" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                    </Stack>
+                </PivotItem>
+
+                {/* Annotation */}
+                <PivotItem headerText="Annotation">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        <MathBtn displayLatex="\cancel{2}" insertLatex="\cancel{#0}" title="\cancel" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bcancel{2}" insertLatex="\bcancel{#0}" title="\bcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\xcancel{ABC}" insertLatex="\xcancel{ABC} " title="\xcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\overbrace{a+b+c}^{\text{note}}" insertLatex="\overbrace{a+b+c}^{\text{#0}} " title="\overbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\underbrace{a+b+c}_{\text{note}}" insertLatex="\underbrace{a+b+c}_{\text{#0}} " title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\boxed{AB}" insertLatex="\boxed{#0} " title="\boxed" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
+
+                {/* TAB 9: HY LẠP */}
+                <PivotItem headerText="Greek">
+                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        {/* Chữ thường */}
+                        <MathBtn displayLatex="\alpha" insertLatex="\alpha" title="\alpha" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\beta" insertLatex="\beta" title="\beta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\gamma" insertLatex="\gamma" title="\gamma" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\delta" insertLatex="\delta" title="\delta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\epsilon" insertLatex="\epsilon" title="\epsilon" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varepsilon" insertLatex="\varepsilon" title="\varepsilon" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\zeta" insertLatex="\zeta" title="\zeta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\eta" insertLatex="\eta" title="\eta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\theta" insertLatex="\theta" title="\theta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\vartheta" insertLatex="\vartheta" title="\vartheta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\iota" insertLatex="\iota" title="\iota" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\kappa" insertLatex="\kappa" title="\kappa" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\lambda" insertLatex="\lambda" title="\lambda" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\mu" insertLatex="\mu" title="\mu" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nu" insertLatex="\nu" title="\nu" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\xi" insertLatex="\xi" title="\xi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\pi" insertLatex="\pi" title="\pi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varpi" insertLatex="\varpi" title="\varpi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rho" insertLatex="\rho" title="\rho" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varrho" insertLatex="\varrho" title="\varrho" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sigma" insertLatex="\sigma" title="\sigma" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varsigma" insertLatex="\varsigma" title="\varsigma" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\tau" insertLatex="\tau" title="\tau" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\upsilon" insertLatex="\upsilon" title="\upsilon" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\phi" insertLatex="\phi" title="\phi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varphi" insertLatex="\varphi" title="\varphi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\chi" insertLatex="\chi" title="\chi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\psi" insertLatex="\psi" title="\psi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\omega" insertLatex="\omega" title="\omega" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        {/* Chữ hoa */}
+                        <MathBtn displayLatex="\Alpha" insertLatex="\Alpha" title="\Alpha" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Beta" insertLatex="\Beta" title="\Beta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Gamma" insertLatex="\Gamma" title="\Gamma" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Delta" insertLatex="\Delta" title="\Delta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Epsilon" insertLatex="\Epsilon" title="\Epsilon" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Zeta" insertLatex="\Zeta" title="\Zeta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Eta" insertLatex="\Eta" title="\Eta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Theta" insertLatex="\Theta" title="\Theta" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Iota" insertLatex="\Iota" title="\Iota" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Kappa" insertLatex="\Kappa" title="\Kappa" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Lambda" insertLatex="\Lambda" title="\Lambda" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Mu" insertLatex="\Mu" title="\Mu" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Nu" insertLatex="\Nu" title="\Nu" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Xi" insertLatex="\Xi" title="\Xi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Pi" insertLatex="\Pi" title="\Pi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Rho" insertLatex="\Rho" title="\Rho" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Sigma" insertLatex="\Sigma" title="\Sigma" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Tau" insertLatex="\Tau" title="\Tau" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Upsilon" insertLatex="\Upsilon" title="\Upsilon" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Phi" insertLatex="\Phi" title="\Phi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Chi" insertLatex="\Chi" title="\Chi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Psi" insertLatex="\Psi" title="\Psi" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Omega" insertLatex="\Omega" title="\Omega" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </Stack>
+                </PivotItem>
+
+            </Pivot>
+        </div>
     );
 }
