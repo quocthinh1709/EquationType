@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 //import { DefaultButton, Stack, Label } from "@fluentui/react";
 import { DefaultButton,IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle } from "@fluentui/react";
 //import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
-import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
+import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField, Panel, PanelType } from "@fluentui/react";
 
 import { MathfieldElement } from "mathlive";
 import "mathlive";
@@ -44,6 +44,9 @@ export default function App({ title }: AppProps) {
   const [dictType, setDictType] = useState<"inline" | "macro">("inline");
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ---------------------
+  // Quản lý hiển thị Panel sửa từ điển
+  const [isEditDictOpen, setIsEditDictOpen] = useState(false);
+  const [dictEditText, setDictEditText] = useState("");
 
   // Kiểm tra xem currentLatex có chứa bất kỳ chuỗi nào trong danh sách cấm hay không
   const isUnsupported = unsupportedMathMlCommands.some(cmd => currentLatex.includes(cmd));
@@ -399,7 +402,37 @@ export default function App({ title }: AppProps) {
     reader.readAsText(file);
     event.target.value = ""; // Reset input
   };
+// Hàm mở giao diện sửa (Tải JSON hiện tại vào TextBox)
+  const handleOpenEditDict = () => {
+    setDictEditText(JSON.stringify(userDict, null, 2));
+    setIsEditDictOpen(true);
+  };
 
+  // Hàm lưu lại dữ liệu sau khi người dùng sửa JSON trực tiếp
+  const handleSaveEditedDict = () => {
+    try {
+      const parsedDict = JSON.parse(dictEditText);
+      
+      // Kiểm tra sơ bộ xem có đúng cấu trúc không
+      if (parsedDict.inline !== undefined && parsedDict.macro !== undefined) {
+        setUserDict(parsedDict);
+        localStorage.setItem("math_user_dict", JSON.stringify(parsedDict));
+        
+        // Cập nhật nóng vào MathLive
+        if (mathfieldRef.current) {
+          // Ghi đè lại cẩn thận để không làm mất phím tắt mặc định
+          mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...parsedDict.inline };
+          mathfieldRef.current.macros = { ...customMacros, ...parsedDict.macro };
+        }
+        
+        setIsEditDictOpen(false);
+      } else {
+        alert("Cấu trúc JSON bị thiếu phần 'inline' hoặc 'macro'!");
+      }
+    } catch (error) {
+      alert("Định dạng JSON không hợp lệ. Vui lòng kiểm tra lại dấu ngoặc, dấu phẩy!");
+    }
+  };
 
   return (
     <div title={title} style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
@@ -442,6 +475,18 @@ export default function App({ title }: AppProps) {
                 text="Xuất"
                 title="Xuất từ điển" 
                 onClick={handleExportDict} 
+                styles={{ 
+                  root: { height: 24, fontSize: 12, padding: "0 10px", borderRadius: "6px" }, 
+                  icon: { fontSize: 12 } 
+                }} 
+              />
+
+              {/* THÊM NÚT SỬA VÀO ĐÂY */}
+              <DefaultButton 
+                iconProps={{ iconName: 'Edit' }} 
+                text="Sửa"
+                title="Xem và chỉnh sửa từ điển" 
+                onClick={handleOpenEditDict} 
                 styles={{ 
                   root: { height: 24, fontSize: 12, padding: "0 10px", borderRadius: "6px" }, 
                   icon: { fontSize: 12 } 
@@ -544,7 +589,39 @@ export default function App({ title }: AppProps) {
             <DefaultButton onClick={() => setIsAddDictOpen(false)} text="Hủy" />
           </DialogFooter>
         </Dialog>
-
+        
+        {/* PANEL XEM VÀ CHỈNH SỬA TỪ ĐIỂN */}
+        <Panel
+          isOpen={isEditDictOpen}
+          onDismiss={() => setIsEditDictOpen(false)}
+          type={PanelType.medium}
+          headerText="Từ điển của bạn (JSON)"
+          closeButtonAriaLabel="Đóng"
+        >
+          <Label style={{ marginBottom: "10px", color: "#605e5c" }}>
+            Sửa từ điển dưới định dạng JSON. Lưu ý dấu ngoặc kép và dấu phẩy.
+          </Label>
+          
+          <TextField
+            multiline
+            autoAdjustHeight
+            value={dictEditText}
+            onChange={(_, val) => setDictEditText(val || "")}
+            styles={{ 
+              field: { 
+                fontFamily: "Consolas, monospace", 
+                fontSize: "13px", 
+                minHeight: "300px",
+                lineHeight: "1.5"
+              } 
+            }}
+          />
+          
+          <Stack horizontal tokens={{ childrenGap: 10 }} style={{ marginTop: "20px" }}>
+            <PrimaryButton iconProps={{ iconName: 'Save' }} text="Lưu thay đổi" onClick={handleSaveEditedDict} />
+            <DefaultButton text="Hủy" onClick={() => setIsEditDictOpen(false)} />
+          </Stack>
+        </Panel>
 
       </Stack>
     </div>

@@ -214,7 +214,7 @@ export const customMacros = {
     "voimoi": "\\forall",
     "tontai": "\\exists",
     "taprong": "\\varnothing",
-    "giaotapho": "\\cap",
+    "giaotaphop": "\\cap",
     "hoptaphop": "\\cup",
     "giatrituyetdoi": "\\left| #? \\right|",
     "canbacn": "\\sqrt[#?]{#?}",
