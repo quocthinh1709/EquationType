@@ -1,30 +1,31 @@
-import * as React from"react";
-import { DefaultButton, Stack, Pivot, PivotItem } from"@fluentui/react";
+import * as React from "react";
+import { useState, useRef } from "react";
+import { DefaultButton, Stack, Pivot, PivotItem, Callout, DirectionalHint } from "@fluentui/react";
 
 export const PaletteColors = {
-    office:"#107c41", // 
-    latex:"#f5b833", // Vàng chú ý
+    office: "#107c41", // 
+    latex: "#f5b833", // Vàng chú ý
     default: undefined  // Để mặc định của hệ thống
 };
 
 declare global {
     namespace JSX {
         interface IntrinsicElements {
-           "math-field": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-               "read-only"?: boolean | string;
+            "math-field": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+                "read-only"?: boolean | string;
             };
         }
     }
 }
-// Hàm tạo nút bấm chứa công thức hiển thị trực quan
-const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: { 
-    displayLatex: string, 
-    insertLatex: string, 
-    title: string, 
-    onInsert: (l: string) => void,
-    borderColor?: string 
-}) => {
 
+// Hàm tạo nút bấm chứa công thức hiển thị trực quan (Dành cho các nút tĩnh)
+const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
+    displayLatex: string,
+    insertLatex: string,
+    title: string,
+    onInsert: (l: string) => void,
+    borderColor?: string
+}) => {
     return (
         <DefaultButton
             title={title}
@@ -32,32 +33,137 @@ const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
             onRenderDescription={() => null}
             styles={{
                 root: {
-                    minWidth:"40px",
-                    height:"40px",
-                    padding:"0",
-                    position:"relative",
-                    borderRadius:"5px",
-                    backgroundColor:"transparent",
-                    // Chỉ vẽ border nếu có borderColor
-                    //border: borderColor ? `1px solid ${borderColor}` :"1px solid transparent"                   
-                    border: borderColor ? `1.4px solid ${borderColor}` :"1px solid"
+                    minWidth: "40px",
+                    height: "40px",
+                    padding: "0",
+                    position: "relative",
+                    borderRadius: "5px",
+                    backgroundColor: "transparent",
+                    border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
                 },
-                // Fluent UI tự động xử lý các trạng thái :hover, :active cho anh
                 rootHovered: {
-                    backgroundColor:"#e1dfdd", // Màu xám nhạt khi hover
-                    borderColor: borderColor ? borderColor :"#a19f9d"
+                    backgroundColor: "#e1dfdd",
+                    borderColor: borderColor ? borderColor : "#a19f9d"
                 },
                 rootPressed: {
-                    backgroundColor:"#c8c6c4" // Màu đậm hơn khi nhấn
+                    backgroundColor: "#c8c6c4"
                 }
             }}
         >
-            <div style={{ position:"absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor:"pointer" }} />
-
-            <math-field read-only style={{ pointerEvents:"none", border:"none", background:"transparent", padding: 0, margin: 0, minHeight:"auto", fontSize:"14px", fontWeight:"bold", outline:"none", color:"inherit" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor: "pointer" }} />
+            <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "14px", fontWeight: "bold", outline: "none", color: "inherit" }}>
                 {displayLatex}
             </math-field>
         </DefaultButton>
+    );
+};
+
+// ==========================================
+// THÊM MỚI: HÀM SINH LATEX MA TRẬN ĐỘNG
+// ==========================================
+const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => {
+    let latex = `\\begin{${matrixType}}\n`;
+    for (let r = 0; r < rows; r++) {
+        let rowContent = [];
+        for (let c = 0; c < cols; c++) {
+            rowContent.push("#?"); // Placeholder cho MathLive
+        }
+        latex += rowContent.join(" & ");
+        if (r < rows - 1) latex += " \\\\\n";
+    }
+    latex += `\n\\end{${matrixType}}`;
+    return latex;
+};
+
+// ==========================================
+// THÊM MỚI: NÚT BẤM CÓ HIỂN THỊ POPUP CHỌN KÍCH THƯỚC MA TRẬN
+// ==========================================
+const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderColor }: {
+    displayLatex: string,
+    matrixType: string, // VD: pmatrix, bmatrix, vmatrix
+    title: string,
+    onInsert: (l: string) => void,
+    borderColor?: string
+}) => {
+    const [isCalloutVisible, setIsCalloutVisible] = useState(false);
+    const [hoveredSize, setHoveredSize] = useState({ r: 0, c: 0 });
+    const buttonRef = useRef<HTMLDivElement>(null);
+    const maxRows = 6;
+    const maxCols = 6;
+
+    const handleSelect = (r: number, c: number) => {
+        const latex = generateMatrixLatex(matrixType, r, c);
+        onInsert(latex);
+        setIsCalloutVisible(false);
+        setHoveredSize({ r: 0, c: 0 }); // Reset
+    };
+
+    return (
+        <div ref={buttonRef} style={{ display: "inline-block" }}>
+            <DefaultButton
+                title={title}
+                onClick={() => setIsCalloutVisible(!isCalloutVisible)}
+                onRenderDescription={() => null}
+                styles={{
+                    root: {
+                        minWidth: "40px",
+                        height: "40px",
+                        padding: "0",
+                        position: "relative",
+                        borderRadius: "5px",
+                        backgroundColor: isCalloutVisible ? "#e1dfdd" : "transparent",
+                        border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                    },
+                    rootHovered: { backgroundColor: "#e1dfdd", borderColor: borderColor ? borderColor : "#a19f9d" },
+                    rootPressed: { backgroundColor: "#c8c6c4" }
+                }}
+            >
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor: "pointer" }} />
+                <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "14px", fontWeight: "bold", outline: "none", color: "inherit" }}>
+                    {displayLatex}
+                </math-field>
+            </DefaultButton>
+
+            {isCalloutVisible && (
+                <Callout
+                    target={buttonRef}
+                    onDismiss={() => setIsCalloutVisible(false)}
+                    directionalHint={DirectionalHint.bottomCenter}
+                    isBeakVisible={true}
+                    styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff" } }}
+                >
+                    <div style={{ textAlign: "center", marginBottom: "8px", fontWeight: "bold", fontSize: "12px", color: "#107c41" }}>
+                        {hoveredSize.r > 0 ? `${hoveredSize.r} x ${hoveredSize.c} Matrix` : "Chọn kích thước"}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onMouseLeave={() => setHoveredSize({ r: 0, c: 0 })}>
+                        {Array.from({ length: maxRows }).map((_, rowIndex) => (
+                            <div key={rowIndex} style={{ display: "flex", gap: "2px" }}>
+                                {Array.from({ length: maxCols }).map((_, colIndex) => {
+                                    const r = rowIndex + 1;
+                                    const c = colIndex + 1;
+                                    const isHovered = r <= hoveredSize.r && c <= hoveredSize.c;
+                                    return (
+                                        <div
+                                            key={colIndex}
+                                            onMouseEnter={() => setHoveredSize({ r, c })}
+                                            onClick={() => handleSelect(r, c)}
+                                            style={{
+                                                width: "20px",
+                                                height: "20px",
+                                                border: "1px solid #c8c6c4",
+                                                backgroundColor: isHovered ? "#b4d6fa" : "#ffffff", // Màu xanh dương nhạt khi di chuột
+                                                cursor: "pointer",
+                                                borderRadius: "2px"
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </Callout>
+            )}
+        </div>
     );
 };
 
@@ -67,8 +173,6 @@ export interface MathPaletteProps {
 }
 
 export default function MathPalette({ onInsert }: MathPaletteProps) {
-    // Kích thước chuẩn cho nút bấm để vừa vặn các biểu tượng lớn
-    const btnStyle = { minWidth:"42px", height:"42px", fontSize:"16px", padding:"0" };
     const pivotWrapperRef = React.useRef<HTMLDivElement>(null);
     const scrollTabs = (direction: 'left' | 'right') => {
         if (pivotWrapperRef.current) {
@@ -84,65 +188,12 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
     };
 
     return (
-        // =====================================
-        // 2. KHUNG BAO NGOÀI (Đã gỡ bỏ onWheel)
-        // =====================================
-        <div ref={pivotWrapperRef} style={{ position:"relative", marginBottom:"10px" }}>
+        <div ref={pivotWrapperRef} style={{ position: "relative", marginBottom: "10px" }}>
+            <DefaultButton onClick={() => scrollTabs('left')} style={{ position: "absolute", top: 0, left: 0, zIndex: 10, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}>❮</DefaultButton>
+            <DefaultButton onClick={() => scrollTabs('right')} style={{ position: "absolute", top: 0, right: 0, zIndex: 10, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}>❯</DefaultButton>
 
-            {/* NÚT BÊN TRÁI */}
-            <DefaultButton
-                onClick={() => scrollTabs('left')}
-                style={{
-                    position:"absolute", top: 0, left: 0, zIndex: 10,
-                    minWidth:"32px", width:"32px", height:"44px", padding: 0,
-                    border:"none", backgroundColor:"#faf9f8", color:"#107c41", fontWeight:"bold"
-                }}
-                title="Cuộn sang trái"
-            >
-                ❮
-            </DefaultButton>
-
-            {/* NÚT BÊN PHẢI */}
-            <DefaultButton
-                onClick={() => scrollTabs('right')}
-                style={{
-                    position:"absolute", top: 0, right: 0, zIndex: 10,
-                    minWidth:"32px", width:"32px", height:"44px", padding: 0,
-                    border:"none", backgroundColor:"#faf9f8", color:"#107c41", fontWeight:"bold"
-                }}
-                title="Cuộn sang phải"
-            >
-                ❯
-            </DefaultButton>
-
-            {/* ===================================== */}
-            {/* 3. KHUNG PIVOT (Dùng cuộn nguyên bản của trình duyệt) */}
-            {/* ===================================== */}
-            <Pivot
-                aria-label="Math Palette Full"
-                styles={{
-                    root: {
-                        overflowX:"auto", // Mở khóa tính năng cuộn nguyên bản (Vuốt Touchpad, Shift + Cuộn)
-                        whiteSpace:"nowrap",
-                        paddingLeft:"32px", // Chừa chỗ cho nút trái
-                        paddingRight:"32px", // Chừa chỗ cho nút phải
-
-                        // Tàng hình thanh trượt xám xịt
-                        scrollbarWidth:"none",
-                        msOverflowStyle:"none",
-                        selectors: {
-                           "&::-webkit-scrollbar": { display:"none" }
-                        }
-                    },
-                    itemContainer: {
-                        whiteSpace:"normal", // Đảm bảo các nút ở dưới không bị lỗi ngang
-                        paddingTop:"5px"
-                    },
-                    link: { fontSize:"14px", fontWeight:"600", color:"#201f1e" },
-                    linkIsSelected: { fontSize:"14px", fontWeight:"bold", color:"#107c41" }
-                }}
-            >
-
+            <Pivot aria-label="Math Palette Full" styles={{ root: { overflowX: "auto", whiteSpace: "nowrap", paddingLeft: "32px", paddingRight: "32px", scrollbarWidth: "none", msOverflowStyle: "none", selectors: { "&::-webkit-scrollbar": { display: "none" } } }, itemContainer: { whiteSpace: "normal", paddingTop: "5px" }, link: { fontSize: "14px", fontWeight: "600", color: "#201f1e" }, linkIsSelected: { fontSize: "14px", fontWeight: "bold", color: "#107c41" } }}>
+                
                 {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
                 <PivotItem headerText="Basic">
                     <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
@@ -268,21 +319,24 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     </Stack>
                 </PivotItem>
 
-                {/* TAB 5: HỆ & MA TRẬN */}
+                {/* TAB 5: HỆ & MA TRẬN - ĐÃ ĐƯỢC CẬP NHẬT */}
                 <PivotItem headerText="Hệ & Ma trận">
                     <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                        {/* Các nút hệ phương trình vẫn dùng MathBtn bình thường */}
                         <MathBtn displayLatex="\lbrace\text{Hệ 2}" insertLatex="\begin{cases} #? &= #? \\ #? &= #? \end{cases}" title="\begin{cases} (2pt)" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\lbrace\text{Hệ 3}" insertLatex="\begin{cases} #? &= #? \\ #? &= #? \\ #? &= #? \end{cases}" title="\begin{cases} (3pt)" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\left[ \text{Hoặc}" insertLatex="\left[ \begin{array}{l} #? \\ #? \end{array} \right." title="\left[ \begin{array}{l}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu } #? \\ #?, & \text{nếu } #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\text{(■)}" insertLatex="\begin{pmatrix} #? & #? \\ #? & #? \end{pmatrix}" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\text{[■]}" insertLatex="\begin{bmatrix} #? & #? \\ #? & #? \end{bmatrix}" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\text{|■|}" insertLatex="\begin{vmatrix} #? & #? \\ #? & #? \end{vmatrix}" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
+                        {/* CÁC NÚT MA TRẬN ĐÃ ĐƯỢC THAY BẰNG MatrixSelectorBtn */}
+                        <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
                         <MathBtn displayLatex="\text{[⋮]}" insertLatex="\begin{bmatrix} #? \\ #? \\ #? \end{bmatrix}" title="\begin{bmatrix} 3x1" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cdots" insertLatex="\cdots" title="\cdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\vdots" insertLatex="\vdots" title="\vdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ddots" insertLatex="\ddots" title="\ddots" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
                     </Stack>
                 </PivotItem>
 
@@ -521,7 +575,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\Omega" insertLatex="\Omega" title="\Omega" onInsert={onInsert} borderColor={PaletteColors.default} />
                     </Stack>
                 </PivotItem>
-
+                
             </Pivot>
         </div>
     );
