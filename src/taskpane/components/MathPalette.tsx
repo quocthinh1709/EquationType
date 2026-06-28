@@ -75,6 +75,141 @@ const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => 
     return latex;
 };
 
+// =========================================================================
+// LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã thêm CỘT)
+// =========================================================================
+// =========================================================================
+// LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã làm tổng quát)
+// =========================================================================
+const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number, cols: number) => {
+    let latex = "";
+    
+    if (type === "cases") {
+        // Hệ và (Ngoặc nhọn lớn)
+        latex += "\\begin{cases}\n";
+        for (let r = 0; r < rows; r++) {
+            let rowContent = Array(cols).fill("#?");
+            latex += rowContent.join(" & ");
+            if (r < rows - 1) latex += " \\\\\n";
+        }
+        latex += "\n\\end{cases}";
+        
+    } else if (type === "array") {
+        // Hệ hoặc (Ngoặc vuông bên trái)
+        const alignStr = Array(cols).fill("l").join(""); 
+        latex += `\\left[ \\begin{array}{${alignStr}}\n`;
+        for (let r = 0; r < rows; r++) {
+            let rowContent = Array(cols).fill("#?");
+            latex += rowContent.join(" & ");
+            if (r < rows - 1) latex += " \\\\\n";
+        }
+        latex += "\n\\end{array} \\right.";
+        
+    } else if (type === "piecewise") {
+        // Hàm số phân nhánh f(x) = { (Thuần túy, không có chữ "nếu")
+        latex += "f(x) = \\begin{cases}\n";
+        for (let r = 0; r < rows; r++) {
+            let rowContent = Array(cols).fill("#?");
+            latex += rowContent.join(" & ");
+            if (r < rows - 1) latex += " \\\\\n";
+        }
+        latex += "\n\\end{cases}";
+    }
+    
+    return latex;
+};
+
+// =========================================================================
+// COMPONENT: Nút chọn Hệ phương trình / Hàm số (Lưới 2D: Dòng x Cột)
+// =========================================================================
+const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }: {
+    displayLatex: string,
+    type: "cases" | "array" | "piecewise",
+    title: string,
+    onInsert: (l: string) => void,
+    borderColor?: string
+}) => {
+    const [isCalloutVisible, setIsCalloutVisible] = useState(false);
+    const [hoveredSize, setHoveredSize] = useState({ r: 0, c: 0 });
+    const buttonRef = useRef<HTMLDivElement>(null);
+    const maxRows = 6;
+    const maxCols = 5; // Với hệ phương trình, 5 cột (VD: a, x, b, y, c) là khá dư dả
+
+    const handleSelect = (r: number, c: number) => {
+        const latex = generateSystemLatex(type, r, c);
+        onInsert(latex);
+        setIsCalloutVisible(false);
+        setHoveredSize({ r: 0, c: 0 });
+    };
+
+    return (
+        <div ref={buttonRef} style={{ display: "inline-block" }}>
+            <DefaultButton
+                title={title}
+                onClick={() => setIsCalloutVisible(!isCalloutVisible)}
+                styles={{
+                    root: {
+                        minWidth: "40px",
+                        height: "40px",
+                        padding: "0",
+                        position: "relative",
+                        borderRadius: "5px",
+                        backgroundColor: isCalloutVisible ? "#e1dfdd" : "transparent",
+                        border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                    },
+                    rootHovered: { backgroundColor: "#e1dfdd", borderColor: borderColor ? borderColor : "#a19f9d" },
+                    rootPressed: { backgroundColor: "#c8c6c4" }
+                }}
+            >
+                <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor: "pointer" }} />
+                <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "14px", fontWeight: "bold", outline: "none", color: "inherit" }}>
+                    {displayLatex}
+                </math-field>
+            </DefaultButton>
+
+            {isCalloutVisible && (
+                <Callout
+                    target={buttonRef}
+                    onDismiss={() => setIsCalloutVisible(false)}
+                    directionalHint={DirectionalHint.bottomCenter}
+                    isBeakVisible={true}
+                    styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff" } }}
+                >
+                    <div style={{ textAlign: "center", marginBottom: "8px", fontWeight: "bold", fontSize: "12px", color: "#107c41" }}>
+                        {hoveredSize.r > 0 ? `Hệ: ${hoveredSize.r} dòng x ${hoveredSize.c} cột` : "Chọn kích thước"}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onMouseLeave={() => setHoveredSize({ r: 0, c: 0 })}>
+                        {Array.from({ length: maxRows - 1 }).map((_, rowIndex) => (
+                            <div key={rowIndex} style={{ display: "flex", gap: "2px" }}>
+                                {Array.from({ length: maxCols }).map((_, colIndex) => {
+                                    const r = rowIndex + 2; // Bắt đầu từ 2 dòng
+                                    const c = colIndex + 1; // Bắt đầu từ 1 cột
+                                    const isHovered = r <= Math.max(2, hoveredSize.r) && c <= hoveredSize.c && hoveredSize.r > 0;
+                                    
+                                    return (
+                                        <div
+                                            key={colIndex}
+                                            onMouseEnter={() => setHoveredSize({ r, c })}
+                                            onClick={() => handleSelect(r, c)}
+                                            style={{
+                                                width: "20px",
+                                                height: "20px",
+                                                border: "1px solid #c8c6c4",
+                                                backgroundColor: isHovered ? "#b4d6fa" : "#ffffff",
+                                                cursor: "pointer",
+                                                borderRadius: "2px"
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </Callout>
+            )}
+        </div>
+    );
+};
 // ==========================================
 // THÊM MỚI: NÚT BẤM CÓ HIỂN THỊ POPUP CHỌN KÍCH THƯỚC MA TRẬN
 // ==========================================
@@ -322,17 +457,17 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 {/* TAB 5: HỆ & MA TRẬN - ĐÃ ĐƯỢC CẬP NHẬT */}
                 <PivotItem headerText="Hệ & Ma trận">
                     <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
-                        {/* Các nút hệ phương trình vẫn dùng MathBtn bình thường */}
-                        <MathBtn displayLatex="\lbrace\text{Hệ 2}" insertLatex="\begin{cases} #? &= #? \\ #? &= #? \end{cases}" title="\begin{cases} (2pt)" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\lbrace\text{Hệ 3}" insertLatex="\begin{cases} #? &= #? \\ #? &= #? \\ #? &= #? \end{cases}" title="\begin{cases} (3pt)" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\left[ \text{Hoặc}" insertLatex="\left[ \begin{array}{l} #? \\ #? \end{array} \right." title="\left[ \begin{array}{l}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu } #? \\ #?, & \text{nếu } #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        {/* CÁC NÚT HỆ PHƯƠNG TRÌNH / HÀM SỐ ĐÃ ĐƯỢC CHUYỂN SANG ĐỘNG */}
+                        <SystemSelectorBtn displayLatex="\lbrace\text{■}" type="cases" title="\begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <SystemSelectorBtn displayLatex="\left[ \text{■}" type="array" title="\left[ \begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu} #? \\ #?, & \text{nếu} #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         
-                        {/* CÁC NÚT MA TRẬN ĐÃ ĐƯỢC THAY BẰNG MatrixSelectorBtn */}
+                        {/* CÁC NÚT MA TRẬN ĐỘNG */}
                         <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         
+                        {/* Các nút phụ tĩnh trợ năng giữ nguyên */}
                         <MathBtn displayLatex="\text{[⋮]}" insertLatex="\begin{bmatrix} #? \\ #? \\ #? \end{bmatrix}" title="\begin{bmatrix} 3x1" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cdots" insertLatex="\cdots" title="\cdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\vdots" insertLatex="\vdots" title="\vdots" onInsert={onInsert} borderColor={PaletteColors.default} />

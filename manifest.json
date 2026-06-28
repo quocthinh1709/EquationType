@@ -4,8 +4,8 @@
     "manifestVersion": "1.17",
     "version": "1.0.0",
     "name": {
-      "short": "Contoso Task Pane Add-in",
-      "full": "Contoso Task Pane Add-in"
+      "short": "Etype",
+      "full": "LSTS Equation Type Add-in"
     },
     "description": {
       "short": "A template to get started.",
@@ -18,8 +18,8 @@
       "termsOfUseUrl": "https://www.contoso.com/servicesagreement"
     },
     "icons": {
-      "outline": "assets/outline.png",
-      "color": "assets/color.png"
+      "outline": "assets/logo-filled.png",
+      "color": "assets/logo-filled.png"
     },
     "accentColor": "#230201",
     "localizationInfo": {
@@ -96,22 +96,22 @@
                     "id": "msgComposeGroup",
                     "label": "Contoso Add-in",
                     "icons": [
-                      { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                      { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                      { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
+                      { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
+                      { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
+                      { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
                     ],
                     "controls": [
                       {
                         "id": "msgComposeOpenPaneButton",
                         "type": "button",
-                        "label": "Show Task Pane",
+                        "label": "Etype",
                         "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
+                          { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
+                          { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
+                          { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
                         ],
                         "supertip": {
-                          "title": "Show Task Pane",
+                          "title": "Etype",
                           "description": "Opens a task pane."
                         },
                         "actionId": "TaskPaneRuntimeShow"
@@ -121,9 +121,9 @@
                         "type": "button",
                         "label": "Perform an action",
                         "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
+                          { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
+                          { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
+                          { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
                         ],
                         "supertip": {
                           "title": "Perform an action",
