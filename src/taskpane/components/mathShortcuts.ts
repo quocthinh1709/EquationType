@@ -6,6 +6,7 @@ export const customInlineShortcuts = {
     "ps": "\\frac{#0}{#?}",
     "vt": "\\vec{#0}",
     "can": "\\sqrt{#0}",
+    "|": "\\mid",
     
     // Logic, toán tử
     "td": "\\Leftrightarrow ",

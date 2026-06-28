@@ -2,7 +2,7 @@
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
   <Id>16686396-5ad6-45d0-b4e1-f5f04d2daa94</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>EquationType</ProviderName>
+  <ProviderName>EType</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="LSTS Equation Editor"/>
   <Description DefaultValue="Công cụ hỗ trợ soạn thảo công thức."/>
@@ -74,11 +74,11 @@
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Get started with your sample add-in!"/>
         <bt:String id="CommandsGroup.Label" DefaultValue="Commands Group"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Etype"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="EType"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Your sample add-in loaded successfully. Go to the HOME tab and click the 'Show Task Pane' button to get started."/>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Click to Open Etype"/>
+        <bt:String id="GetStarted.Description" DefaultValue="Your sample add-in loaded successfully. Go to the HOME tab and click the 'EType' button to get started."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Click to Open EType"/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
