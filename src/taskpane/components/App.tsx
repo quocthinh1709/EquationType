@@ -1,7 +1,9 @@
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
 //import { DefaultButton, Stack, Label } from "@fluentui/react";
-import { DefaultButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle } from "@fluentui/react";
+import { DefaultButton,IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle } from "@fluentui/react";
+//import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
+import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
 
 import { MathfieldElement } from "mathlive";
 import "mathlive";
@@ -23,6 +25,25 @@ export default function App({ title }: AppProps) {
 
   // THÊM BIẾN TRẠNG THÁI LƯU CHẾ ĐỘ CHÈN
   const [insertMode, setInsertMode] = useState<string>("mathml");
+
+
+  // --- STATE TỪ ĐIỂN ---
+  // Khởi tạo từ điển từ localStorage (nếu có)
+  const [userDict, setUserDict] = useState<{ inline: Record<string, string>, macro: Record<string, string> }>(() => {
+    try {
+      const saved = localStorage.getItem("math_user_dict");
+      return saved ? JSON.parse(saved) : { inline: {}, macro: {} };
+    } catch (e) {
+      return { inline: {}, macro: {} };
+    }
+  });
+
+  // Quản lý hiển thị Popup Thêm từ điển
+  const [isAddDictOpen, setIsAddDictOpen] = useState(false);
+  const [dictKey, setDictKey] = useState("");
+  const [dictType, setDictType] = useState<"inline" | "macro">("inline");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  // ---------------------
 
   // Kiểm tra xem currentLatex có chứa bất kỳ chuỗi nào trong danh sách cấm hay không
   const isUnsupported = unsupportedMathMlCommands.some(cmd => currentLatex.includes(cmd));
@@ -264,12 +285,14 @@ export default function App({ title }: AppProps) {
       // ==========================================
       mf.inlineShortcuts = {
         ...mf.inlineShortcuts,      // Giữ lại phím tắt gốc của thư viện
-        ...customInlineShortcuts    // Đổ toàn bộ phím tắt tự chế từ file mathShortcuts.ts vào đây
+        ...customInlineShortcuts,    // Đổ toàn bộ phím tắt tự chế từ file mathShortcuts.ts vào đây
+        ...userDict.inline
       };
 
       mf.macros = {
         ...mf.macros,               // Giữ lại macro gốc
-        ...customMacros             // Đổ toàn bộ macro tự chế vào đây
+        ...customMacros,             // Đổ toàn bộ macro tự chế vào đây
+        ...userDict.macro
       };
 
 
@@ -307,6 +330,77 @@ export default function App({ title }: AppProps) {
     }
   };
 
+
+  // Hàm Lưu phím tắt mới vào bộ nhớ
+  const handleSaveToDict = () => {
+    if (!dictKey.trim()) {
+      alert("Vui lòng nhập phím tắt!");
+      return;
+    }
+    
+    // Cập nhật State
+    const updatedDict = { ...userDict };
+    updatedDict[dictType][dictKey.trim()] = currentLatex; // Lấy mã LaTeX hiện tại trên màn hình
+    setUserDict(updatedDict);
+    
+    // Lưu vào LocalStorage
+    localStorage.setItem("math_user_dict", JSON.stringify(updatedDict));
+
+    // Cập nhật nóng vào MathLive đang hiển thị
+    if (mathfieldRef.current) {
+      if (dictType === "inline") {
+        mathfieldRef.current.inlineShortcuts = { ...mathfieldRef.current.inlineShortcuts, ...updatedDict.inline };
+      } else {
+        mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...updatedDict.macro };
+      }
+    }
+
+    setIsAddDictOpen(false);
+    setDictKey(""); // reset
+  };
+
+  // Hàm Xuất File JSON
+  const handleExportDict = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userDict, null, 2));
+    const downloadNode = document.createElement('a');
+    downloadNode.setAttribute("href", dataStr);
+    downloadNode.setAttribute("download", "Math_Dictionary.json");
+    document.body.appendChild(downloadNode);
+    downloadNode.click();
+    downloadNode.remove();
+  };
+
+  // Hàm Nhập File JSON
+  const handleImportDict = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target?.result as string);
+        if (importedData.inline && importedData.macro) {
+          setUserDict(importedData);
+          localStorage.setItem("math_user_dict", JSON.stringify(importedData));
+          
+          // Cập nhật nóng
+          if (mathfieldRef.current) {
+            mathfieldRef.current.inlineShortcuts = { ...mathfieldRef.current.inlineShortcuts, ...importedData.inline };
+            mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...importedData.macro };
+          }
+          alert("Nhập từ điển thành công!");
+        } else {
+          alert("Cấu trúc file JSON không đúng chuẩn từ điển!");
+        }
+      } catch (error) {
+        alert("Lỗi đọc file JSON!");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ""; // Reset input
+  };
+
+
   return (
     <div title={title} style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
       <Stack tokens={{ childrenGap: 12 }}>
@@ -322,7 +416,54 @@ export default function App({ title }: AppProps) {
 
         {/* Ô CODE ĐỒNG BỘ 2 CHIỀU */}
         <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
+          {/*
           <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
+            */}
+          <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "4px" }}>
+            <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
+            
+            <Stack horizontal tokens={{ childrenGap: 6 }} verticalAlign="center">
+              {/* Input ẩn */}
+              <input type="file" accept=".json" ref={fileInputRef} style={{ display: "none" }} onChange={handleImportDict} />
+              
+              {/* Nút Nhập / Xuất (Có Icon, bo góc) */}
+              <DefaultButton 
+                iconProps={{ iconName: 'Upload' }} 
+                text="Nhập"
+                title="Nhập từ điển" 
+                onClick={() => fileInputRef.current?.click()} 
+                styles={{ 
+                  root: { height: 24, fontSize: 12, padding: "0 10px", borderRadius: "6px" }, 
+                  icon: { fontSize: 12 } 
+                }} 
+              />
+              <DefaultButton 
+                iconProps={{ iconName: 'Download' }} 
+                text="Xuất"
+                title="Xuất từ điển" 
+                onClick={handleExportDict} 
+                styles={{ 
+                  root: { height: 24, fontSize: 12, padding: "0 10px", borderRadius: "6px" }, 
+                  icon: { fontSize: 12 } 
+                }} 
+              />
+
+              {/* Nút Lưu Từ điển (Thêm Icon Save, bo góc, màu xanh lá đồng bộ) */}
+              <DefaultButton 
+                iconProps={{ iconName: 'Save' }} 
+                text="Lưu vào từ điển" 
+                onClick={() => setIsAddDictOpen(true)}
+                disabled={!currentLatex}
+                styles={{ 
+                  root: { height: 24, fontSize: 12, padding: "0 10px", marginLeft: "4px", borderRadius: "6px" },
+                  rootDisabled: { backgroundColor: "transparent" },
+                  label: { fontWeight: "bold", color: currentLatex ? "#107c41" : undefined },
+                  icon: { fontSize: 12, color: currentLatex ? "#107c41" : undefined }
+                }} 
+              />
+            </Stack>
+          </Stack>
+
           <textarea
             value={currentLatex}
             onChange={(e) => {
@@ -366,6 +507,44 @@ export default function App({ title }: AppProps) {
           style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold" }}
           title="Chèn công thức mới hoặc ghi đè công thức đang bôi đen"
         />
+
+          
+
+        {/* DIALOG NHẬP TÊN TỪ ĐIỂN (Nằm ngầm, chỉ hiện khi bấm "+ Lưu vào từ điển") */}
+        <Dialog
+          hidden={!isAddDictOpen}
+          onDismiss={() => setIsAddDictOpen(false)}
+          dialogContentProps={{
+            type: DialogType.normal,
+            title: 'Thêm vào từ điển',
+            subText: 'Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.'
+          }}
+        >
+          <ChoiceGroup
+            options={[
+              { key: 'inline', text: 'Inline (Tự động chuyển đổi khi gõ)' },
+              { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước)' }
+            ]}
+            selectedKey={dictType}
+            onChange={(_, option) => setDictType(option?.key as "inline" | "macro")}
+          />
+          <TextField 
+            label="Ký tự kích hoạt (Shortcut key)" 
+            placeholder="VD: ptb2, hpt..." 
+            value={dictKey} 
+            onChange={(_, val) => setDictKey(val || "")} 
+            styles={{ 
+              root: { marginTop: 10 },
+              fieldGroup: { height: 40 }, // Tăng chiều cao của khung viền lên 40px
+              field: { fontSize: "15px", padding: "8px" } // Tăng nhẹ cỡ chữ để cân đối với chiều cao mới
+            }}
+          />
+          <DialogFooter>
+            <PrimaryButton onClick={handleSaveToDict} text="Lưu" />
+            <DefaultButton onClick={() => setIsAddDictOpen(false)} text="Hủy" />
+          </DialogFooter>
+        </Dialog>
+
 
       </Stack>
     </div>
