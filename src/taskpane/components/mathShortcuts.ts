@@ -41,6 +41,7 @@ export const customMacros = {
     "phanso": "\\frac{#0}{#?}",
     "vecto": "\\vec{#0}",
     "canbachai": "\\sqrt{#0}",
+    "canbacba": "\\sqrt[3]{#0}",
    
     // Logic, toán tử
     "td": "\\Leftrightarrow ",
@@ -59,5 +60,10 @@ export const customMacros = {
     "male": "\\text{♂}",
     "female": "\\text{♀}",
     "angstrom": "\\text{Å}",
+
+    //
+    "tamgiac": "\\triangle",
+    "dongdang": "\\backsim",
+    "dongdanghai": "\\text{ᔕ}"
   
 };
