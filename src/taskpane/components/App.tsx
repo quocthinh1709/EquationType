@@ -172,8 +172,18 @@ export default function App({ title }: AppProps) {
 
           if (svgElement) {
 
+            const FONT_SIZE_PT = 12;
+            const EX_TO_PT = FONT_SIZE_PT * 0.5; // 1ex = 6pt
+            const PT_TO_EMU = 12700; // 1pt = 12700 EMU
+
             mathWidthEx = parseFloat(svgElement.getAttribute("width") || "0");
             mathHeightEx = parseFloat(svgElement.getAttribute("height") || "0");
+
+            const widthPt = mathWidthEx * EX_TO_PT;
+            const heightPt = mathHeightEx * EX_TO_PT;
+            // Render canvas ở kích thước cố định, độc lập với devicePixelRatio
+            const RENDER_SCALE = 4; // chất lượng cao
+            const PX_PER_PT = 96 / 72; // screen dpi / point dpi
 
             // MathJax thường trả về dạng: style="vertical-align: -0.25ex;"
             const styleStr = svgElement.getAttribute("style") || "";
@@ -182,14 +192,14 @@ export default function App({ title }: AppProps) {
               verticalAlignEx = parseFloat(vaMatch[1]); 
             }
             // 1. Lấy kích thước chuẩn xác từ viewBox (đây là cách an toàn nhất)
-            const vb = svgElement.viewBox.baseVal;
-            const width = vb.width;
-            const height = vb.height;
+            //const vb = svgElement.viewBox.baseVal;
+            //const width = vb.width;
+            //const height = vb.height;
 
             // 2. QUAN TRỌNG: Gán lại kích thước bằng pixel cho SVG
             // Nếu không có bước này, Canvas sẽ không biết kích thước ảnh là bao nhiêu
-            svgElement.setAttribute("width", width + "px");
-            svgElement.setAttribute("height", height + "px");
+            //svgElement.setAttribute("width", width + "px");
+            //svgElement.setAttribute("height", height + "px");
 
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
@@ -197,10 +207,19 @@ export default function App({ title }: AppProps) {
             // Tăng chất lượng ảnh (Scale)
             const scale = window.devicePixelRatio || 1;
             
-            canvas.width = width * scale;
-            canvas.height = height * scale;
+            //canvas.width = width * scale;
+            //canvas.height = height * scale;
 
-            const svgData = new XMLSerializer().serializeToString(svgElement);
+            canvas.width = Math.ceil(widthPt * PX_PER_PT * RENDER_SCALE);
+            canvas.height = Math.ceil(heightPt * PX_PER_PT * RENDER_SCALE);
+            svgElement.setAttribute("width", canvas.width + "px");
+            svgElement.setAttribute("height", canvas.height + "px");
+            svgElement.setAttribute("xmlns","http://www.w3.org/2000/svg");
+            svgElement.setAttribute("shape-rendering","geometricPrecision");
+
+            let svgData = new XMLSerializer().serializeToString(svgElement);
+            
+            {/*
             const img = new Image();
             const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
             const url = URL.createObjectURL(svgBlob);
@@ -211,14 +230,20 @@ export default function App({ title }: AppProps) {
               img.onerror = reject;
               img.src = url;
             });
-
-            ctx?.scale(scale, scale);
-
+;
+            
             ctx?.drawImage(img, 0, 0);
-
             insertContent = canvas.toDataURL("image/png").split(",")[1];
+            */}
+            svgData = svgData.replace(/currentColor/gi, "#000000");
+            const utf8Encoded = encodeURIComponent(svgData).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
+                return String.fromCharCode(parseInt(p1, 16));
+            });
+            
+            insertContent = window.btoa(utf8Encoded);
             isInsertingImage = true;
-            URL.revokeObjectURL(url);
+
+            //URL.revokeObjectURL(url);
           }
         }
       } catch (error) {
@@ -252,7 +277,7 @@ export default function App({ title }: AppProps) {
 
           // 3. ĐIỀU CHỈNH KÍCH THƯỚC KHỚP VỚI FONT CHỮ
           // Hệ số chuyển đổi từ "ex" sang "points" của Word
-          const exToPt = currentFontSize * 0.5; 
+          const exToPt = currentFontSize * 0.44; 
           
           if (mathWidthEx > 0 && mathHeightEx > 0) {
               picture.width = mathWidthEx * exToPt;
@@ -265,7 +290,7 @@ export default function App({ title }: AppProps) {
           if (verticalAlignEx !== 0) {
               // verticalAlignEx thường là số âm (VD: -0.25). 
               // font.position nhận giá trị pt. Số âm sẽ kéo ảnh thụt xuống dưới đường baseline.
-              picRange.font.position = verticalAlignEx * exToPt; 
+              picRange.font.position = verticalAlignEx * exToPt - 2; 
           }
 
           // 4. Bọc Content Control

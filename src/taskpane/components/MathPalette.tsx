@@ -590,8 +590,8 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\vdots" insertLatex="\vdots" title="\vdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ldots" insertLatex="\ldots" title="\ldots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ddots" insertLatex="\ddots" title="\ddots" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\Im" insertLatex="\Im" title="\Im" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\Re" insertLatex="\Re" title="\Re" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Im" insertLatex="\Im" title="\Im" onInsert={onInsert} borderColor={PaletteColors.office} />
+                        <MathBtn displayLatex="\Re" insertLatex="\Re" title="\Re" onInsert={onInsert} borderColor={PaletteColors.office} />
                         <MathBtn displayLatex="ᔕ" insertLatex="\text{ᔕ}" title="\text{ᔕ}" onInsert={onInsert} borderColor={PaletteColors.default} />
 
                        
