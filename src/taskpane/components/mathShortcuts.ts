@@ -52,7 +52,7 @@ export const customInlineShortcuts = {
     "vcau": "V = \\frac{4}{3}\\pi R^3",                  // Thể tích khối cầu
     "scau": "S = 4\\pi R^2",                             // Diện tích mặt cầu
     "vtron": "V = \\pi R^2 h",                           // Thể tích khối trụ tròn xoay
-    "vnón": "V = \\frac{1}{3}\\pi R^2 h",                // Thể tích khối nón
+    "vnon": "V = \\frac{1}{3}\\pi R^2 h",                // Thể tích khối nón
     "ptchan": "\\frac{x}{a} + \\frac{y}{b} + \\frac{z}{c} = 1", // Phương trình mặt phẳng theo đoạn chắn
     "modun": "\\left| z \\right| = \\sqrt{a^2 + b^2}",    // Môđun số phức z = a + bi
 
@@ -145,7 +145,7 @@ export const customInlineShortcuts = {
     "alkin": "\\text{C}_n\\text{H}_{2n-2}",              // Ankin
     "ruou": "\\text{C}_n\\text{H}_{2n+1}\\text{OH}",     // Ancol đơn chức, no
     "axit": "\\text{C}_n\\text{H}_{2n+1}\\text{COOH}",   // Axit cacboxylic no, đơn chức
-        "kcb": "K_c = \\frac{[#?]^#? \\cdot [#?]^#?}{[#?]^#? \\cdot [#?]^#?}", // Hằng số cân bằng Kc
+    "kcb": "K_c = \\frac{[#?]^#? \\cdot [#?]^#?}{[#?]^#? \\cdot [#?]^#?}", // Hằng số cân bằng Kc
     "faraday": "m = \\frac{A}{n} \\cdot \\frac{It}{F}",      // Định luật Faraday (Điện phân)
     "tst": "T = [#?^+]^#? \\cdot [#?^-]^#?",                 // Tích số tan
     "xni": "\\xrightarrow{Ni, t^\\circ}",                    // Xúc tác Niken, nhiệt độ
@@ -192,6 +192,7 @@ export const customMacros = {
     // Hệ phương trình
     "hehaipt": "\\begin{cases} #0 &= #? \\\\ #? &= #? \\end{cases}",
     "hebapt": "\\begin{cases} #0 &= #? \\\\ #? &= #? \\\\ #? &= #? \\end{cases}",
+    "hehaiptnew": "\\left\\{ \\begin{aligned} #0 &= #? \\\\ #? &= #? \\end{aligned} \\right",
     
     // Tích phân, đạo hàm
     "ticphan": "\\int_{#?}^{#?}",

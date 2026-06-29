@@ -196,6 +196,7 @@ export default function App({ title }: AppProps) {
 
             // Tăng chất lượng ảnh (Scale)
             const scale = window.devicePixelRatio || 1;
+            
             canvas.width = width * scale;
             canvas.height = height * scale;
 
