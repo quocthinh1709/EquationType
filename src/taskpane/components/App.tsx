@@ -85,7 +85,25 @@ export default function App({ title }: AppProps) {
     { key: "svg", text: "Ảnh" }
   ];
 
-
+  // ==========================================
+  // BỘ LỌC TỰ ĐỘNG: Biến mọi chuỗi Macro tĩnh thành Macro Động (Có gợi ý + Cho phép Sửa)
+  // ==========================================
+  const upgradeMacros = (macroDict: Record<string, any>) => {
+    const upgraded: Record<string, any> = {};
+    Object.keys(macroDict).forEach(key => {
+      const val = macroDict[key];
+      if (typeof val === "string") {
+        upgraded[key] = {
+          def: val,                 // Lấy mã LaTeX gốc
+          captureSelection: false,  // Mở khóa click chuột
+          expand: true              // Ép bung mã, tự động nhận diện #0 và #?
+        };
+      } else {
+        upgraded[key] = val;
+      }
+    });
+    return upgraded;
+  };
 
   // ==========================================
   // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN (KHI BÔI ĐEN/CLICK)
@@ -219,22 +237,6 @@ export default function App({ title }: AppProps) {
 
             let svgData = new XMLSerializer().serializeToString(svgElement);
             
-            {/*
-            const img = new Image();
-            const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
-            const url = URL.createObjectURL(svgBlob);
-
-            // ... (Phần còn lại giữ nguyên như cũ)
-            await new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
-              img.src = url;
-            });
-;
-            
-            ctx?.drawImage(img, 0, 0);
-            insertContent = canvas.toDataURL("image/png").split(",")[1];
-            */}
             svgData = svgData.replace(/currentColor/gi, "#000000");
             const utf8Encoded = encodeURIComponent(svgData).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
                 return String.fromCharCode(parseInt(p1, 16));
@@ -290,7 +292,7 @@ export default function App({ title }: AppProps) {
           if (verticalAlignEx !== 0) {
               // verticalAlignEx thường là số âm (VD: -0.25). 
               // font.position nhận giá trị pt. Số âm sẽ kéo ảnh thụt xuống dưới đường baseline.
-              picRange.font.position = verticalAlignEx * exToPt - 2; 
+              picRange.font.position = verticalAlignEx * exToPt - 0.1; 
           }
 
           // 4. Bọc Content Control
@@ -342,8 +344,10 @@ export default function App({ title }: AppProps) {
 
       mf.macros = {
         ...mf.macros,               // Giữ lại macro gốc
-        ...customMacros,             // Đổ toàn bộ macro tự chế vào đây
-        ...userDict.macro
+        //...customMacros,             // Đổ toàn bộ macro tự chế vào đây  
+        //...userDict.macro
+        ...upgradeMacros(customMacros),
+        ...upgradeMacros(userDict.macro)
       };
 
 
@@ -378,6 +382,7 @@ export default function App({ title }: AppProps) {
     if (mathfieldRef.current) {
       mathfieldRef.current.insert(latexCode);
       mathfieldRef.current.focus();
+      
     }
   };
 
@@ -402,7 +407,8 @@ export default function App({ title }: AppProps) {
       if (dictType === "inline") {
         mathfieldRef.current.inlineShortcuts = { ...mathfieldRef.current.inlineShortcuts, ...updatedDict.inline };
       } else {
-        mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...updatedDict.macro };
+        //mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...updatedDict.macro }; //Không có con trỏ
+        mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...upgradeMacros(updatedDict.macro) };
       }
     }
 
@@ -449,7 +455,8 @@ export default function App({ title }: AppProps) {
           // Cập nhật nóng vào giao diện MathLive đang mở
           if (mathfieldRef.current) {
             mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...mergedDict.inline };
-            mathfieldRef.current.macros = { ...customMacros, ...mergedDict.macro };
+            //mathfieldRef.current.macros = { ...customMacros, ...mergedDict.macro };
+            mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(mergedDict.macro) };
           }
           
           alert("Nhập từ điển thành công! Các phím tắt cũ của bạn vẫn được giữ nguyên an toàn.");
@@ -507,7 +514,8 @@ export default function App({ title }: AppProps) {
     
     if (mathfieldRef.current) {
       mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...newDict.inline };
-      mathfieldRef.current.macros = { ...customMacros, ...newDict.macro };
+      //mathfieldRef.current.macros = { ...customMacros, ...newDict.macro };
+      mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(newDict.macro) };
     }
     setIsEditDictOpen(false);
   };

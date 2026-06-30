@@ -179,7 +179,7 @@ export const customMacros = {
     // Phân số, căn, vector
     "phanso": "\\frac{#0}{#?}",
     "vecto": "\\vec{#0}",
-    "canbachai": "\\sqrt{#0}",
+    "canbachai": "\sqrt{#0}",
     "canbacba": "\\sqrt[3]{#0}",
    
     // Logic, toán tử
@@ -225,6 +225,7 @@ export const customMacros = {
     "tichcohuong": "\\left[ \\vec{#?}, \\vec{#?} \\right]",
     "ptmatphang": "#?(x - #?) + #?(y - #?) + #?(z - #?) = 0",
     "ptmatcau": "(x - #?)^2 + (y - #?)^2 + (z - #?)^2 = R^2",
+    "ptelip": String.raw`\frac{x^{2}}{#0^{2}}+\frac{y^{2}}{#?^{2}}=1`,
     "thetichchop": "V = \\frac{1}{3} B \\cdot h",
     "thetichlangtru": "V = B \\cdot h",
     "thetichcau": "V = \\frac{4}{3}\\pi R^3",
@@ -235,7 +236,11 @@ export const customMacros = {
     "modunsophuc": "\\left| z \\right| = \\sqrt{a^2 + b^2}",
     "capsocong": "u_n = u_1 + (n-1)d",
     "capsonhan": "u_n = u_1 \\cdot q^{n-1}",
-    
+    "doanab": "\\left\\lbrack #0;#? \\right\\rbrack",
+    "khoangab": "\\left(#0;#?\\right)",
+    "tichvohuong": "\\vec{a}\\cdot \\vec{b}=\\left|\\vec{a}\\right|\\cdot \\left|\\vec{b}\\right|\\cdot \\cos{\\left(\\vec{a},\\vec{b}\\right)}",
+    "chinhhop": "A_{#0}^{#?}",
+    "tohop": "C_{#0}^{#?}",
     // ==========================================
     // VẬT LÝ
     // ==========================================
