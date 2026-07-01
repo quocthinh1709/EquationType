@@ -4,22 +4,22 @@
     "manifestVersion": "1.17",
     "version": "1.0.0",
     "name": {
-      "short": "Etype",
-      "full": "LSTS Equation Type"
+      "short": "E-Editor",
+      "full": "Easy Efficient Equation Editor"
     },
     "description": {
       "short": "A template to get started.",
       "full": "This is the template to get started."
     },
     "developer": {
-      "name": "Contoso",
+      "name": "LSTS",
       "websiteUrl": "https://www.contoso.com",
       "privacyUrl": "https://www.contoso.com/privacy",
       "termsOfUseUrl": "https://www.contoso.com/servicesagreement"
     },
     "icons": {
-      "outline": "assets/logo-filled.png",
-      "color": "assets/logo-filled.png"
+      "outline": "assets/icon-filled.png",
+      "color": "assets/icon-filled.png"
     },
     "accentColor": "#230201",
     "localizationInfo": {
@@ -96,22 +96,22 @@
                     "id": "msgComposeGroup",
                     "label": "Contoso Add-in",
                     "icons": [
-                      { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
-                      { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
-                      { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
+                      { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
+                      { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
+                      { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
                     ],
                     "controls": [
                       {
                         "id": "msgComposeOpenPaneButton",
                         "type": "button",
-                        "label": "Etype",
+                        "label": "E-Editor",
                         "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
+                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
+                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
+                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
                         ],
                         "supertip": {
-                          "title": "Etype",
+                          "title": "E-Editor",
                           "description": "Opens a task pane."
                         },
                         "actionId": "TaskPaneRuntimeShow"
@@ -121,9 +121,9 @@
                         "type": "button",
                         "label": "Perform an action",
                         "icons": [
-                          { "size": 16, "url": "https://localhost:3000/assets/logo-16.png" },
-                          { "size": 32, "url": "https://localhost:3000/assets/logo-32.png" },
-                          { "size": 80, "url": "https://localhost:3000/assets/logo-80.png" }
+                          { "size": 16, "url": "https://localhost:3000/assets/icon-16.png" },
+                          { "size": 32, "url": "https://localhost:3000/assets/icon-32.png" },
+                          { "size": 80, "url": "https://localhost:3000/assets/icon-80.png" }
                         ],
                         "supertip": {
                           "title": "Perform an action",

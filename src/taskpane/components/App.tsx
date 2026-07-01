@@ -616,8 +616,8 @@ export default function App({ title }: AppProps) {
           <Toggle
             label="Mode:"
             inlineLabel
-            onText={isUnsupported ? "Image (Only)" : "Image"}
-            offText="MathML"
+            onText={isUnsupported ? "E-Editor (Only)" : "E-Editor"}
+            offText="Office"
             checked={insertMode === "svg"}
             onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
             disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ

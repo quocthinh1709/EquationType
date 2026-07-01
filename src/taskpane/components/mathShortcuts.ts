@@ -211,7 +211,7 @@ export const customMacros = {
     // ==========================================
     "daohambacnhat": "y' = \\frac{#? \\cdot #? - #? \\cdot #?}{(#? x + #?)^2}",
     "tichphantungphan": "\\int #? \\, d(#?) = #? \\cdot #? - \\int #? \\, d(#?)",
-    "nghiembac2": "x_{1,2} = \\frac{-#? \\pm \\sqrt{#?}}{2 \\cdot #?}",
+    "nghiembachai": "x_{1,2} = \\frac{-#? \\pm \\sqrt{#?}}{2 \\cdot #?}",
     "khoangcachmatphang": "d(M, (P)) = \\frac{\\left| #? \\right|}{\\sqrt{#?^2 + #?^2 + #?^2}}",
     "voimoi": "\\forall",
     "tontai": "\\exists",
@@ -241,6 +241,8 @@ export const customMacros = {
     "tichvohuong": "\\vec{a}\\cdot \\vec{b}=\\left|\\vec{a}\\right|\\cdot \\left|\\vec{b}\\right|\\cdot \\cos{\\left(\\vec{a},\\vec{b}\\right)}",
     "chinhhop": "A_{#0}^{#?}",
     "tohop": "C_{#0}^{#?}",
+    "ptduongthangct":String.raw`\frac{x-x_{0}}{a}=\frac{y-y_{0}}{b}=\frac{z-z_{0}}{c}`,
+    "ptduongthangts":String.raw`\left\{\begin{matrix}x=x_{0}+at \\ y=y_{0}+bt \\ z=z_{0}+ct\end{matrix}\right`,
     // ==========================================
     // VẬT LÝ
     // ==========================================

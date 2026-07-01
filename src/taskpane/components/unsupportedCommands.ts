@@ -7,5 +7,5 @@ export const unsupportedMathMlCommands = [
   "\\underline{",
   "\\xrightarrow",
   "\\overrightarrow{",
-  "\\phase{"
+  "\\phase{",
 ];
