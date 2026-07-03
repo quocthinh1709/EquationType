@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
 //import { DefaultButton, Stack, Label } from "@fluentui/react";
-import { DefaultButton,IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle } from "@fluentui/react";
+import { DefaultButton,IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, MessageBar, MessageBarType } from "@fluentui/react";
 //import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
 import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField, Panel, PanelType, SearchBox, ThemeProvider, createTheme } from "@fluentui/react";
 import { initializeIcons } from '@fluentui/react/lib/Icons';
@@ -37,6 +37,9 @@ export interface AppProps {
 }
 
 export default function App({ title }: AppProps) {
+  // BƯỚC 1: KIỂM TRA MÔI TRƯỜNG LÀ WORD ONLINE
+  const isOnline = Office.context.platform === Office.PlatformType.OfficeOnline;
+
   const containerRef = useRef<HTMLDivElement>(null);
   const mathfieldRef = useRef<MathfieldElement | null>(null);
   const [currentLatex, setCurrentLatex] = useState("");
@@ -255,8 +258,9 @@ export default function App({ title }: AppProps) {
 
     // [C] GIAO TIẾP WORD (Đã fix thứ tự Sync)
     try {
-      const eqId = "LSTS_" + new Date().getTime();
-      Office.context.document.settings.set(eqId, latexOriginal);
+      const eqId = "LSTS_" + new Date().getTime() + "_" + Math.random().toString(36).substring(2, 6);
+      //Office.context.document.settings.set(eqId, latexOriginal);
+      Office.context.document.settings.set(eqId, latexExpanded);
       await Office.context.document.settings.saveAsync();
 
       await Word.run(async (context) => {
@@ -286,6 +290,9 @@ export default function App({ title }: AppProps) {
               picture.height = mathHeightEx * exToPt;
           }
           picture.lockAspectRatio = true;
+
+          // SYNC ĐỂ LƯU KÍCH THƯỚC TRƯỚC KHI XỬ LÝ VỊ TRÍ (Tùy chọn an toàn)
+          //await context.sync();
 
           // 3. ĐIỀU CHỈNH ĐỘ CAO/THẤP CỦA ẢNH (BASELINE ALIGNMENT)
           const picRange = picture.getRange();
@@ -529,6 +536,17 @@ export default function App({ title }: AppProps) {
           {title} - Công cụ Toán học
         </Label>
         */}
+        {/* HIỂN THỊ CẢNH BÁO NẾU LÀ WORD ONLINE */}
+        {isOnline && (
+          <MessageBar
+            messageBarType={MessageBarType.blocked}
+            isMultiline={true}
+          >
+            <strong>Phiên bản Web không được hỗ trợ chèn vào Word!</strong><br />
+            Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
+          </MessageBar>
+        )}
+
         <MathPalette onInsert={insertSymbol} />
 
         <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
