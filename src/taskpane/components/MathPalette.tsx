@@ -39,11 +39,13 @@ const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
                     position: "relative",
                     borderRadius: "5px",
                     backgroundColor: "transparent",
-                    border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                    //border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                    borderColor: "transparent"
                 },
                 rootHovered: {
                     backgroundColor: "#e1dfdd",
-                    borderColor: borderColor ? borderColor : "#a19f9d"
+                    //borderColor: borderColor ? borderColor : "#a19f9d"
+                    borderColor: borderColor ? borderColor: "${borderColor}"
                 },
                 rootPressed: {
                     backgroundColor: "#c8c6c4"
@@ -51,13 +53,27 @@ const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
             }}
         >
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor: "pointer" }} />
-            <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "14px", fontWeight: "bold", outline: "none", color: "inherit" }}>
+            <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "18px", outline: "none", color: "inherit" }}>
                 {displayLatex}
             </math-field>
         </DefaultButton>
     );
 };
 
+// ==========================================
+// THÊM MỚI: Thanh dọc phân cách các nhóm nút
+// ==========================================
+const VerticalDivider = () => {
+    return (
+        <div style={{
+            width: "1px",
+            height: "32px",               // Chiều cao ngắn hơn nút một chút (nút của anh cao 40px)
+            backgroundColor: "#c8c6c4",   // Màu xám nhạt chuẩn của giao diện Office
+            margin: "4px 4px",            // Khoảng cách hai bên trái phải
+            alignSelf: "center"           // Căn giữa theo chiều dọc
+        }} />
+    );
+};
 // ==========================================
 // THÊM MỚI: HÀM SINH LATEX MA TRẬN ĐỘNG
 // ==========================================
@@ -75,9 +91,6 @@ const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => 
     return latex;
 };
 
-// =========================================================================
-// LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã thêm CỘT)
-// =========================================================================
 // =========================================================================
 // LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã làm tổng quát)
 // =========================================================================
@@ -155,9 +168,14 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
                         position: "relative",
                         borderRadius: "5px",
                         backgroundColor: isCalloutVisible ? "#e1dfdd" : "transparent",
-                        border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                        //border: borderColor ? `1.4px solid ${borderColor}` : "1px solid",
+                        borderColor: "transparent"
                     },
-                    rootHovered: { backgroundColor: "#e1dfdd", borderColor: borderColor ? borderColor : "#a19f9d" },
+                    rootHovered: { 
+                        backgroundColor: "#e1dfdd", 
+                        //borderColor: borderColor ? borderColor : "#a19f9d" 
+                        borderColor: borderColor ? borderColor: "${borderColor}"
+                    },
                     rootPressed: { backgroundColor: "#c8c6c4" }
                 }}
             >
@@ -247,9 +265,14 @@ const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderCo
                         position: "relative",
                         borderRadius: "5px",
                         backgroundColor: isCalloutVisible ? "#e1dfdd" : "transparent",
-                        border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                        //border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
+                        borderColor: "transparent"
                     },
-                    rootHovered: { backgroundColor: "#e1dfdd", borderColor: borderColor ? borderColor : "#a19f9d" },
+                    rootHovered: { 
+                        backgroundColor: "#e1dfdd", 
+                        //borderColor: borderColor ? borderColor : "#a19f9d" 
+                        borderColor: borderColor ? borderColor: "${borderColor}"
+                    },
                     rootPressed: { backgroundColor: "#c8c6c4" }
                 }}
             >
@@ -302,9 +325,6 @@ const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderCo
     );
 };
 
-// ==========================================
-// THÊM MỚI: Hàm hỗ trợ hiển thị LaTeX trên tiêu đề Tab
-// ==========================================
 // ==========================================
 // THÊM MỚI: Hàm hỗ trợ hiển thị LaTeX trên tiêu đề Tab (Đã fix lỗi click)
 // ==========================================
@@ -379,13 +399,18 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
                         <MathBtn displayLatex="\frac{#0}{#?}" insertLatex="\frac{#0}{#?}" title="\frac" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="{#0}/{#?}" insertLatex="{#0}/{#?}" title="/" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="{#0}\dfrac{#?}{#?}" insertLatex="{#0}\dfrac{#?}{#?}" title="{}\dfrac{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <VerticalDivider />
                         <MathBtn displayLatex="\sqrt{#0}" insertLatex="\sqrt{#0}" title="\sqrt" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\sqrt[3]{#0}" insertLatex="\sqrt[3]{#0}" title="\sqrt[3]{}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\sqrt[#?]{#0}" insertLatex="\sqrt[#?]{#0}" title="\sqrt[n]{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <VerticalDivider />
                         <MathBtn displayLatex="{#?}^{#?}" insertLatex="{#0}^{#?}" title="^{}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="{#0}_{#?}" insertLatex="{#0}_{#?}" title="_{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="{#0}_{#?}^{#?}" insertLatex="{#0}_{#?}^{#?}" title="{}_{}^{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="_{#0}^{#?}{#?}" insertLatex="_{#0}^{#?}{#?}" title="_{}^{}{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <VerticalDivider />
                         <MathBtn displayLatex="\left|#0\right|" insertLatex="\left|#0\right|" title="\left|\right|" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
                         <MathBtn displayLatex="\overline{#0}" insertLatex="\overline{#0}" title="\overline" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\underline{#0}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.latex} />
                     </Stack>
@@ -709,7 +734,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* TAB 9: HY LẠP */}
                 <PivotItem headerText="Greek letters"
-                    onRenderItemLink={() => renderLatexTab("\\alpha \\Omega")}>
+                    onRenderItemLink={() => renderLatexTab("\\alpha \\beta")}>
                     <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
                         {/* Chữ thường */}
                         <MathBtn displayLatex="\alpha" insertLatex="\alpha" title="\alpha" onInsert={onInsert} borderColor={PaletteColors.default} />

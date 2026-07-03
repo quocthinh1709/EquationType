@@ -32,11 +32,9 @@ const officeGreenTheme = createTheme({
 // Đảm bảo load Font nội bộ chuẩn xác
 MathfieldElement.fontsDirectory = "./fonts";
 
-export interface AppProps {
-  title: string;
-}
 
-export default function App({ title }: AppProps) {
+
+export default function App() {
   // BƯỚC 1: KIỂM TRA MÔI TRƯỜNG LÀ WORD ONLINE
   const isOnline = Office.context.platform === Office.PlatformType.OfficeOnline;
 
@@ -223,10 +221,10 @@ export default function App({ title }: AppProps) {
             //svgElement.setAttribute("height", height + "px");
 
             const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
+            //const ctx = canvas.getContext("2d");
 
             // Tăng chất lượng ảnh (Scale)
-            const scale = window.devicePixelRatio || 1;
+            //const scale = window.devicePixelRatio || 1;
             
             //canvas.width = width * scale;
             //canvas.height = height * scale;
@@ -529,7 +527,7 @@ export default function App({ title }: AppProps) {
 
   return (
     <ThemeProvider theme={officeGreenTheme}>
-    <div title={title} style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
+    <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
       <Stack tokens={{ childrenGap: 12 }}>
         {/*
         <Label style={{ fontSize: "18px", fontWeight: "bold", color: "#107c41" }}>
@@ -628,9 +626,16 @@ export default function App({ title }: AppProps) {
             }}
           />
         </div>
-
+        <Stack 
+          horizontal 
+          horizontalAlign="space-between" 
+          verticalAlign="center" // Căn giữa nút chèn theo chiều cao của cụm bên trái
+          tokens={{ childrenGap: 16 }}
+          style={{ marginTop: "12px", marginBottom: "10px" }}
+        >
         {/* NÚT CHỌN ĐỊNH DẠNG CHÈN */}
-        <div>
+        
+        <Stack tokens={{ childrenGap: 4 }} style={{ flexGrow: 1 }}>
           <Toggle
             label="Mode:"
             inlineLabel
@@ -639,27 +644,28 @@ export default function App({ title }: AppProps) {
             checked={insertMode === "svg"}
             onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
             disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ
-            styles={{ root: { marginTop: "10px", marginBottom: isUnsupported ? "4px" : "10px" } }}
+            styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }}
           />
           
           {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
           {isUnsupported && (
             <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
-              ⚠️ Công thức này không được Office Math hỗ trợ. Chế độ chèn ảnh sẽ được sử dụng.
+              ⚠️ Office Math is not supported. Insert E-Editor type only.
             </Label>
           )}
-        </div>
+         
+        </Stack>
 
         {/* NÚT CHÈN */}
         <DefaultButton
           primary
-          text="Chèn / Cập nhật"
+          text="Insert/Update"
           onClick={handleInsertEquation}
-          style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold" }}
-          title="Chèn công thức mới hoặc ghi đè công thức đang bôi đen"
+          style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
+          title="Insert new equation or update selected equation"
         />
 
-          
+         </Stack> 
 
         {/* DIALOG NHẬP TÊN TỪ ĐIỂN (Nằm ngầm, chỉ hiện khi bấm "+ Lưu vào từ điển") */}
         <Dialog
@@ -674,14 +680,14 @@ export default function App({ title }: AppProps) {
           <ChoiceGroup
             options={[
               { key: 'inline', text: 'Inline (Tự động chuyển đổi khi gõ)' },
-              { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước)' }
+              { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước để gợi ý)' }
             ]}
             selectedKey={dictType}
             onChange={(_, option) => setDictType(option?.key as "inline" | "macro")}
           />
           <TextField 
-            label="Ký tự kích hoạt (Shortcut key)" 
-            placeholder="VD: ptb2, hpt..." 
+            label="Shortcut key (không gõ '\' ở trước)" 
+            placeholder="VD: ptb, hpt..." 
             value={dictKey} 
             onChange={(_, val) => setDictKey(val || "")} 
             styles={{ 
