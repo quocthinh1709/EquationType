@@ -544,8 +544,9 @@ export default function App() {
             Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
           </MessageBar>
         )}
-
-        <MathPalette onInsert={insertSymbol} />
+        <div style={{ height: "175px" }}>
+          <MathPalette onInsert={insertSymbol} />
+        </div>
 
         <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
         <div ref={containerRef} id="mathfield-container" />

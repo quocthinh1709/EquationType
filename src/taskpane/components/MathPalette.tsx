@@ -45,7 +45,7 @@ const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
                 rootHovered: {
                     backgroundColor: "#e1dfdd",
                     //borderColor: borderColor ? borderColor : "#a19f9d"
-                    borderColor: borderColor ? borderColor: "${borderColor}"
+                    borderColor: borderColor ? borderColor : "${borderColor}"
                 },
                 rootPressed: {
                     backgroundColor: "#c8c6c4"
@@ -74,6 +74,156 @@ const VerticalDivider = () => {
         }} />
     );
 };
+
+// ==========================================
+// THÊM MỚI: BỘ GOM NÚT TỰ ĐỘNG (ĐỘNG THEO CHIỀU RỘNG 2 HÀNG)
+// ==========================================
+// ==========================================
+// THÊM MỚI: BỘ GOM NÚT TỰ ĐỘNG BẰNG CÁCH ĐO TỌA ĐỘ THỰC TẾ
+// ==========================================
+const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
+    const [isCalloutVisible, setIsCalloutVisible] = useState(false);
+    
+    // maxVisible = null nghĩa là đang trong trạng thái "Đo lường"
+    const [maxVisible, setMaxVisible] = useState<number | null>(null);
+    
+    const containerRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLDivElement>(null);
+
+    const childrenArray = React.Children.toArray(children);
+
+    // 1. Hàm thực hiện đo lường vị trí các nút
+    React.useEffect(() => {
+        // Chỉ đo lường khi maxVisible bị reset về null
+        if (maxVisible !== null) return undefined;
+
+        const calculateCapacity = () => {
+            if (!containerRef.current) return;
+            
+            // Lấy thẻ div chứa toàn bộ các nút
+            const flexContainer = containerRef.current.firstElementChild as HTMLElement;
+            if (!flexContainer) return;
+
+            const items = Array.from(flexContainer.children) as HTMLElement[];
+            if (items.length === 0) return;
+
+            // Lấy tọa độ Y (offsetTop) của nút đầu tiên làm mốc của Hàng 1
+            const firstItemTop = items[0].offsetTop;
+            let currentRow = 1;
+            let lastItemTop = firstItemTop;
+            let splitIndex = items.length;
+
+            // Quét qua từng nút để xem nó nằm ở hàng thứ mấy
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                
+                // Nếu tọa độ Y của nút này lớn hơn nút trước đó 20px -> Nó đã rớt xuống hàng mới
+                if (item.offsetTop > lastItemTop + 20) {
+                    currentRow++;
+                    lastItemTop = item.offsetTop;
+                }
+
+                // Ngay khi phát hiện có nút rớt xuống HÀNG 3
+                if (currentRow > 2) {
+                    splitIndex = i; // Đánh dấu vị trí bắt đầu bị tràn
+                    break;
+                }
+            }
+
+            // Nếu có tràn hàng 3 -> Cắt bớt 1 nút cuối cùng của hàng 2 để nhường chỗ cho Nút Mũi Tên
+            if (splitIndex < items.length) {
+                setMaxVisible(splitIndex - 1);
+            } else {
+                setMaxVisible(items.length); // Đủ chỗ thì hiện hết
+            }
+        };
+
+        // Chờ 100ms để Font chữ MathLive render xong hình khối rồi mới đo
+        const timer = setTimeout(calculateCapacity, 100);
+        return () => clearTimeout(timer);
+    }, [maxVisible, childrenArray.length]);
+
+    // 2. Lắng nghe sự kiện người dùng kéo giãn/thu hẹp khung Word
+    React.useEffect(() => {
+        let resizeTimer: any;
+        const handleResize = () => {
+            clearTimeout(resizeTimer);
+            // Khi bị kéo khung, ép hệ thống đo lại từ đầu
+            resizeTimer = setTimeout(() => setMaxVisible(null), 150);
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+
+    // === PHẦN RENDER GIAO DIỆN ===
+    const isMeasuring = maxVisible === null;
+    
+    // Khi đang đo: Render TẤT CẢ nút. Khi đo xong: Chỉ render số nút vừa vặn 2 hàng
+    const visibleChildren = isMeasuring ? childrenArray : childrenArray.slice(0, maxVisible);
+    const hiddenChildren = isMeasuring ? [] : childrenArray.slice(maxVisible);
+
+    return (
+        <div 
+            ref={containerRef} 
+            style={{ 
+                width: "100%", 
+                // TRICK: Khi đang đo, ép chiều cao khung tối đa 95px và giấu đi phần tràn. 
+                // Nhờ vậy, người dùng sẽ không thấy giao diện bị chớp giật hay lòi ra hàng 3!
+                maxHeight: isMeasuring ? "95px" : "auto", 
+                overflow: isMeasuring ? "hidden" : "visible" 
+            }}
+        >
+            {/* Sử dụng thẻ div flex thuần thay vì Stack để đo tọa độ chính xác tuyệt đối */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "2px", marginTop: "5px" }}>
+                
+                {/* 1. Các nút hiển thị chính */}
+                {visibleChildren}
+
+                {/* 2. Nút mũi tên (chỉ hiện khi đã đo xong và phát hiện có nút bị giấu) */}
+                {!isMeasuring && hiddenChildren.length > 0 && (
+                    <div ref={buttonRef} style={{ display: "inline-block" }}>
+                        <DefaultButton
+                            title="Xem thêm ký hiệu"
+                            onClick={() => setIsCalloutVisible(!isCalloutVisible)}
+                            iconProps={{ iconName: 'ChevronDown' }}
+                            styles={{
+                                root: {
+                                    minWidth: "40px",
+                                    height: "40px",
+                                    padding: "0",
+                                    borderRadius: "5px",
+                                    backgroundColor: isCalloutVisible ? "#e1dfdd" : "transparent",
+                                    borderColor: "transparent"
+                                },
+                                rootHovered: { backgroundColor: "#e1dfdd" },
+                                rootPressed: { backgroundColor: "#c8c6c4" },
+                                icon: { fontSize: 16, color: "#107c41", fontWeight: "bold" }
+                            }}
+                        />
+
+                        {isCalloutVisible && (
+                            <Callout
+                                target={buttonRef}
+                                onDismiss={() => setIsCalloutVisible(false)}
+                                directionalHint={DirectionalHint.bottomRightEdge}
+                                isBeakVisible={true}
+                                styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff", maxWidth: "260px" } }}
+                            >
+                                {/* Đã thay thế onClickCapture thành onClick để fix lỗi không chèn được chữ */}
+                                <div onClick={() => setIsCalloutVisible(false)}>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+                                        {hiddenChildren}
+                                    </div>
+                                </div>
+                            </Callout>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 // ==========================================
 // THÊM MỚI: HÀM SINH LATEX MA TRẬN ĐỘNG
 // ==========================================
@@ -96,7 +246,7 @@ const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => 
 // =========================================================================
 const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number, cols: number) => {
     let latex = "";
-    
+
     if (type === "cases") {
         // Hệ và (Ngoặc nhọn lớn)
         latex += "\\begin{cases}\n";
@@ -106,10 +256,10 @@ const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number
             if (r < rows - 1) latex += " \\\\\n";
         }
         latex += "\n\\end{cases}";
-        
+
     } else if (type === "array") {
         // Hệ hoặc (Ngoặc vuông bên trái)
-        const alignStr = Array(cols).fill("l").join(""); 
+        const alignStr = Array(cols).fill("l").join("");
         latex += `\\left[ \\begin{array}{${alignStr}}\n`;
         for (let r = 0; r < rows; r++) {
             let rowContent = Array(cols).fill("#?");
@@ -117,7 +267,7 @@ const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number
             if (r < rows - 1) latex += " \\\\\n";
         }
         latex += "\n\\end{array} \\right.";
-        
+
     } else if (type === "piecewise") {
         // Hàm số phân nhánh f(x) = { (Thuần túy, không có chữ "nếu")
         latex += "f(x) = \\begin{cases}\n";
@@ -128,7 +278,7 @@ const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number
         }
         latex += "\n\\end{cases}";
     }
-    
+
     return latex;
 };
 
@@ -171,10 +321,10 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
                         //border: borderColor ? `1.4px solid ${borderColor}` : "1px solid",
                         borderColor: "transparent"
                     },
-                    rootHovered: { 
-                        backgroundColor: "#e1dfdd", 
+                    rootHovered: {
+                        backgroundColor: "#e1dfdd",
                         //borderColor: borderColor ? borderColor : "#a19f9d" 
-                        borderColor: borderColor ? borderColor: "${borderColor}"
+                        borderColor: borderColor ? borderColor : "${borderColor}"
                     },
                     rootPressed: { backgroundColor: "#c8c6c4" }
                 }}
@@ -203,7 +353,7 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
                                     const r = rowIndex + 2; // Bắt đầu từ 2 dòng
                                     const c = colIndex + 1; // Bắt đầu từ 1 cột
                                     const isHovered = r <= Math.max(2, hoveredSize.r) && c <= hoveredSize.c && hoveredSize.r > 0;
-                                    
+
                                     return (
                                         <div
                                             key={colIndex}
@@ -268,10 +418,10 @@ const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderCo
                         //border: borderColor ? `1.4px solid ${borderColor}` : "1px solid"
                         borderColor: "transparent"
                     },
-                    rootHovered: { 
-                        backgroundColor: "#e1dfdd", 
+                    rootHovered: {
+                        backgroundColor: "#e1dfdd",
                         //borderColor: borderColor ? borderColor : "#a19f9d" 
-                        borderColor: borderColor ? borderColor: "${borderColor}"
+                        borderColor: borderColor ? borderColor : "${borderColor}"
                     },
                     rootPressed: { backgroundColor: "#c8c6c4" }
                 }}
@@ -330,35 +480,32 @@ const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderCo
 // ==========================================
 const renderLatexTab = (latexStr: string) => {
     return (
-        <span style={{ 
+        <span style={{
             position: "relative", // Để làm mỏ neo cho lớp phủ absolute bên trong
-            display: "inline-flex", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            width: "100%", 
-            height: "100%" 
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%",
         }}>
-            {/* Lớp màng vô hình phủ lên trên cùng để bắt trọn click, giúp tab nhận được sự kiện */}
-            <span style={{ 
-                position: "absolute", 
-                top: 0, left: 0, right: 0, bottom: 0, 
-                zIndex: 10, 
-                cursor: "pointer" 
-            }} />
-            
-            <math-field 
-                read-only 
-                style={{ 
-                    pointerEvents: "none", 
-                    border: "none", 
-                    background: "transparent", 
-                    padding: 0, 
-                    margin: 0, 
-                    minHeight: "auto", 
-                    fontSize: "14px", 
+        
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 8, cursor: "pointer" }} />
+
+            <math-field
+                read-only
+                tabIndex={-1}
+                style={{
+                    pointerEvents: "none",
+                    userSelect: "none",
+                    border: "none",
+                    background: "transparent",
+                    padding: 0,
+                    margin: 0,
+                    minHeight: "auto",
+                    fontSize: "14px",
                     fontWeight: "bold",
-                    outline: "none", 
-                    color: "inherit" 
+                    outline: "none",
+                    color: "inherit"
                 }}
             >
                 {latexStr}
@@ -375,6 +522,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
     const pivotWrapperRef = React.useRef<HTMLDivElement>(null);
     const scrollTabs = (direction: 'left' | 'right') => {
         if (pivotWrapperRef.current) {
+            // Trở về cách gọi gốc: Tìm đúng thẻ tablist của Fluent UI
             const tabList = pivotWrapperRef.current.querySelector('[role="tablist"]');
             if (tabList) {
                 const scrollAmount = 250;
@@ -388,15 +536,68 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
     return (
         <div ref={pivotWrapperRef} style={{ position: "relative", marginBottom: "10px" }}>
-            <DefaultButton onClick={() => scrollTabs('left')} style={{ position: "absolute", top: 0, left: 0, zIndex: 10, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}>❮</DefaultButton>
-            <DefaultButton onClick={() => scrollTabs('right')} style={{ position: "absolute", top: 0, right: 0, zIndex: 10, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}>❯</DefaultButton>
+            <DefaultButton 
+                onClick={() => scrollTabs('left')} 
+                style={{ position: "absolute", top: 0, left: 0, zIndex: 50, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}
+            >❮</DefaultButton>
+            
+            <DefaultButton 
+                onClick={() => scrollTabs('right')} 
+                style={{ position: "absolute", top: 0, right: 0, zIndex: 50, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}
+            >❯</DefaultButton>
 
-            <Pivot aria-label="Math Palette Full" styles={{ root: { overflowX: "auto", whiteSpace: "nowrap", paddingLeft: "32px", paddingRight: "32px", scrollbarWidth: "none", msOverflowStyle: "none", selectors: { "&::-webkit-scrollbar": { display: "none" } } }, itemContainer: { whiteSpace: "normal", paddingTop: "5px" }, link: { fontSize: "14px", fontWeight: "600", color: "#201f1e", backgroundColor: "#efefef", width: "50px", minWidth: "50px", padding: "0" }, linkIsSelected: { fontSize: "14px", fontWeight: "bold", color: "#107c41", width: "50px", minWidth: "50px", padding: "0" } }}>
-                
+            <Pivot aria-label="Math Palette Full"
+                styles={{
+                    root: {
+                        overflowX: "auto",
+                        whiteSpace: "nowrap",
+                        paddingLeft: "34px",
+                        paddingRight: "34px",
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                        borderRadius: "15px",
+                        selectors: { "&::-webkit-scrollbar": { display: "none" } }
+                    },
+                    itemContainer: {
+                        whiteSpace: "normal",
+                        paddingTop: "5px"
+                    },
+                    link: {
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        color: "#201f1e",
+                        backgroundColor: "#e1e1e1",
+                        width: "50px",
+                        minWidth: "50px",
+                        padding: "0",
+                        marginRight: "1px",
+                        marginLeft: "1px",
+                    },
+
+                    linkIsSelected: {
+                        fontSize: "14px",
+                        fontWeight: "bold",
+                        color: "#107c41",
+                        backgroundColor: "transparent",
+                        width: "50px",
+                        minWidth: "50px",
+                        padding: "0",
+                        selectors: {
+                            // Đưa đường gạch xanh (khi được chọn) lên trên
+                            "&::before": {
+                                top: 0,                   // Ép dính vào mép trên cùng
+                                bottom: "auto",           // Hủy bỏ vị trí ở dưới mặc định
+                                height: "3px",            // (Tùy chọn) Chỉnh độ dày của đường kẻ cho đẹp
+                                backgroundColor: "#107c41" // Đảm bảo giữ màu xanh chuẩn
+                            }
+                        }
+                    }
+                }}>
+
                 {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
-                <PivotItem  headerText="Cơ bản" 
-                            onRenderItemLink={() => renderLatexTab("\\frac{1}{2}\\sqrt{x}")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                <PivotItem headerText="Cơ bản"
+                    onRenderItemLink={() => renderLatexTab("\\frac{1}{2}\\sqrt{x}")}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\frac{#0}{#?}" insertLatex="\frac{#0}{#?}" title="\frac" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="{#0}/{#?}" insertLatex="{#0}/{#?}" title="/" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="{#0}\dfrac{#?}{#?}" insertLatex="{#0}\dfrac{#?}{#?}" title="{}\dfrac{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -413,19 +614,19 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\left|#0\right|" insertLatex="\left|#0\right|" title="\left|\right|" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\overline{#0}" insertLatex="\overline{#0}" title="\overline" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\underline{#0}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.latex} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* TAB 2: TOÁN TỬ & LOGIC */}
-                <PivotItem headerText="Logic" 
-                        onRenderItemLink={() => renderLatexTab("\\times \\div")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
-                        
-                        
+                <PivotItem headerText="Logic"
+                    onRenderItemLink={() => renderLatexTab("\\times \\div")}>
+                    <OverflowMathGroup>
+
+
                         <MathBtn displayLatex="\times" insertLatex="\times" title="\times" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\div" insertLatex="\div" title="\div" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cdot" insertLatex="\cdot" title="\cdot" onInsert={onInsert} borderColor={PaletteColors.default} />
-                         <MathBtn displayLatex="\pm" insertLatex="\pm" title="\pm" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\pm" insertLatex="\pm" title="\pm" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\mp" insertLatex="\mp" title="\mp" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\oplus" insertLatex="\oplus" title="\oplus" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ominus" insertLatex="\ominus" title="\ominus" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -442,22 +643,22 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\lt" insertLatex="\lt" title="\tt" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\le" insertLatex="\le" title="\le" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\leqslant" insertLatex="\leqslant" title="\leqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         <MathBtn displayLatex="\propto" insertLatex="\propto" title="\propto" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\varpropto" insertLatex="\varpropto" title="\varpropto" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\triangleq" insertLatex="\triangleq" title="\triangleq" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         <MathBtn displayLatex="\neq" insertLatex="\neq" title="\neq" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\infty" insertLatex="\infty" title="\infty" onInsert={onInsert} borderColor={PaletteColors.default} />
 
-                        
-                    </Stack>
+
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* TẬP HỢP */}
-                <PivotItem headerText="Sets" 
-                        onRenderItemLink={() => renderLatexTab("\\forall \\in")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                <PivotItem headerText="Sets"
+                    onRenderItemLink={() => renderLatexTab("\\forall \\in")}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\forall" insertLatex="\forall" title="\forall" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\in" insertLatex="\in" title="\in" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\notin" insertLatex="\notin" title="\notin" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -474,11 +675,11 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\cap" insertLatex="\cap" title="\cap" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\setminus" insertLatex="\setminus" title="\setminus" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\emptyset" insertLatex="\emptyset" title="\emptyset" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
-                        <MathBtn displayLatex="\exists" insertLatex="\exists" title="\exists" onInsert={onInsert} borderColor={PaletteColors.default} />                     
+
+                        <MathBtn displayLatex="\exists" insertLatex="\exists" title="\exists" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\nexists" insertLatex="\nexists" title="\nexists" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\complement" insertLatex="\complement" title="\complement" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         <MathBtn displayLatex="\mid" insertLatex="\mid" title="\mid" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\land" insertLatex="\land" title="\land" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\lor" insertLatex="\lor" title="\lor" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -489,7 +690,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\to" insertLatex="\to" title="\to" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\gets" insertLatex="\gets" title="\gets" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\leftrightarrow" insertLatex="\leftrightarrow" title="\leftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         <MathBtn displayLatex="\emptyset" insertLatex="\emptyset" title="\emptyset" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\empty" insertLatex="\empty" title="\empty" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\varnothing" insertLatex="\varnothing" title="\varnothing" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -498,18 +699,18 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\iff" insertLatex="\iff" title="\iff" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\neg" insertLatex="\neg" title="\neg" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\lnot" insertLatex="\lnot" title="\lnot" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         <MathBtn displayLatex="\mathbb{N}" insertLatex="\mathbb{N}" title="\mathbb{N}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\mathbb{Z}" insertLatex="\mathbb{Z}" title="\mathbb{Z}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\mathbb{R}" insertLatex="\mathbb{R}" title="\mathbb{R}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\mathbb{Q}" insertLatex="\mathbb{Q}" title="\mathbb{Q}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* GIẢI TÍCH */}
-                <PivotItem headerText="Giải tích" 
+                <PivotItem headerText="Giải tích"
                     onRenderItemLink={() => renderLatexTab("\\textstyle\\int \\Sigma")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\int_{#0}^{#1}" insertLatex="\int_{#0}^{#1}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\oint" insertLatex="\oint" title="\oint" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -524,35 +725,35 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\partial" insertLatex="\partial" title="\partial" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\nabla" insertLatex="\nabla" title="\nabla" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="!" insertLatex="!" title="!" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* TAB 5: HỆ & MA TRẬN - ĐÃ ĐƯỢC CẬP NHẬT */}
                 <PivotItem headerText="Hệ & Ma trận"
                     onRenderItemLink={() => renderLatexTab("\\begin{bmatrix} a &b \\\\ c &d \\end{bmatrix}")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         {/* CÁC NÚT HỆ PHƯƠNG TRÌNH / HÀM SỐ ĐÃ ĐƯỢC CHUYỂN SANG ĐỘNG */}
                         <SystemSelectorBtn displayLatex="\lbrace\text{■}" type="cases" title="\begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <SystemSelectorBtn displayLatex="\left[ \text{■}" type="array" title="\left[ \begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu} #? \\ #?, & \text{nếu} #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         {/* CÁC NÚT MA TRẬN ĐỘNG */}
                         <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        
+
                         {/* Các nút phụ tĩnh trợ năng giữ nguyên */}
                         <MathBtn displayLatex="\text{[⋮]}" insertLatex="\begin{bmatrix} #? \\ #? \\ #? \end{bmatrix}" title="\begin{bmatrix} 3x1" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cdots" insertLatex="\cdots" title="\cdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\vdots" insertLatex="\vdots" title="\vdots" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ddots" insertLatex="\ddots" title="\ddots" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* HÌNH & LƯỢNG GIÁC */}
                 <PivotItem headerText="Lượng giác"
                     onRenderItemLink={() => renderLatexTab("\\sin \\pi")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\sin" insertLatex="\sin(#?)" title="\sin" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\sin^{-1}" insertLatex="\sin^{-1}(#?)" title="\sin^{-1}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cos" insertLatex="\cos(#?)" title="\cos" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -575,13 +776,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\widehat{#?}" insertLatex="\widehat{#0}" title="\widehat{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\overset{\frown}{#0}" insertLatex="\overset{\frown}{#0}" title="\overset{\frown}{}" onInsert={onInsert} />
                         <MathBtn displayLatex="\overset{\curvearrowright}{#0}" insertLatex="\overset{\curvearrowright}{#0}" title="\overset{\curvearrowright}{}" onInsert={onInsert} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* LÝ & HÓA HỌC */}
                 <PivotItem headerText="Lý & Hóa"
                     onRenderItemLink={() => renderLatexTab("t^{\\circ} \\, ^{A}_{Z}X")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\rightarrow" insertLatex="\rightarrow" title="\rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\rightleftharpoons" insertLatex="\rightleftharpoons" title="\rightleftharpoons" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\uparrow" insertLatex="\uparrow" title="\uparrow" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -597,13 +798,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\mu" insertLatex="\mu" title="\mu" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\text{\AA}" insertLatex="\text{\AA}" title="\text{\AA}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\hbar" insertLatex="\hbar" title="\hbar" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* Accents*/}
                 <PivotItem headerText="Accents"
                     onRenderItemLink={() => renderLatexTab("\\bar{#?} \\hat{#?}")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\bar{#?}" insertLatex="\bar{#0}" title="\bar" onInsert={onInsert} borderColor={PaletteColors.office} />
                         <MathBtn displayLatex="\bar{\bar{a}}" insertLatex="\bar{\bar{#0}}" title="\bar{\bar{}}" onInsert={onInsert} borderColor={PaletteColors.office} />
                         <MathBtn displayLatex="\hat{#?}" insertLatex="\hat{#0}" title="\hat" onInsert={onInsert} borderColor={PaletteColors.office} />
@@ -613,18 +814,18 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\underline{#?}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\tilde{#?}" insertLatex="\tilde{#0}" title="\tilde" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\vec{#?}" insertLatex="\vec{#0}" title="\vec" onInsert={onInsert} />
-                        
+
                         <MathBtn displayLatex="\overrightarrow{#?}" insertLatex="\overrightarrow{#0}" title="\overrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\underrightarrow{#?}" insertLatex="\underrightarrow{#0}" title="\underrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\overbrace{#?}" insertLatex="\overbrace{#0}" title="\overbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\underbrace{#?}" insertLatex="\underbrace{#0}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* MŨI TÊN */}
                 <PivotItem headerText="Arrows"
                     onRenderItemLink={() => renderLatexTab("\\rightarrow \\uparrow")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\leftarrow" insertLatex="\leftarrow" title="\leftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\rightarrow" insertLatex="\rightarrow" title="\rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\leftrightarrow" insertLatex="\leftrightarrow" title="\leftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -650,13 +851,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\xlongequal{ab}" insertLatex="\xlongequal{#0}" title="\xlongequal" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\xrightarrow[xy]{ab}" insertLatex="\xrightarrow[#0]{#?}" title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\xmapsto{ab}" insertLatex="\xmapsto{#0}" title="\xmapsto" onInsert={onInsert} borderColor={PaletteColors.latex} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* Symbols */}
                 <PivotItem headerText="Symbols"
                     onRenderItemLink={() => renderLatexTab("\\infty \\nabla")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\sim" insertLatex="\sim" title="\sim" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\backsim" insertLatex="\backsim" title="\backsim" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\infty" insertLatex="\infty" title="\infty" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -675,7 +876,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\Re" insertLatex="\Re" title="\Re" onInsert={onInsert} borderColor={PaletteColors.office} />
                         <MathBtn displayLatex="ᔕ" insertLatex="\text{ᔕ}" title="\text{ᔕ}" onInsert={onInsert} borderColor={PaletteColors.default} />
 
-                       
+
                         <MathBtn displayLatex="\imath" insertLatex="\imath" title="\imath" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\jmath" insertLatex="\jmath" title="\jmath" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ell" insertLatex="\ell" title="\ell" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -715,13 +916,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\circledS" insertLatex="\circledS" title="\circledS" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\text{♂}" insertLatex="\text{♂}" title="\text{♂}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\text{♀}" insertLatex="\text{♀}" title="\text{♀}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* Annotation */}
                 <PivotItem headerText="Annotation"
                     onRenderItemLink={() => renderLatexTab("\\overbrace{#?}^{\\text{note}}")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         <MathBtn displayLatex="\cancel{2}" insertLatex="\cancel{#0}" title="\cancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\bcancel{2}" insertLatex="\bcancel{#0}" title="\bcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\xcancel{ABC}" insertLatex="\xcancel{ABC}" title="\xcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -729,13 +930,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\underbrace{a+b+c}_{\text{note}}" insertLatex="\underbrace{a+b+c}_{\text{#0}}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\boxed{AB}" insertLatex="\boxed{#0}" title="\boxed" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\phase{60^\circ}" insertLatex="\phase{#0}" title="\phase{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
 
                 {/* TAB 9: HY LẠP */}
                 <PivotItem headerText="Greek letters"
                     onRenderItemLink={() => renderLatexTab("\\alpha \\beta")}>
-                    <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginTop: 5 }}>
+                    <OverflowMathGroup>
                         {/* Chữ thường */}
                         <MathBtn displayLatex="\alpha" insertLatex="\alpha" title="\alpha" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\beta" insertLatex="\beta" title="\beta" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -791,9 +992,9 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\Chi" insertLatex="\Chi" title="\Chi" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\Psi" insertLatex="\Psi" title="\Psi" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\Omega" insertLatex="\Omega" title="\Omega" onInsert={onInsert} borderColor={PaletteColors.default} />
-                    </Stack>
+                    </OverflowMathGroup>
                 </PivotItem>
-                
+
             </Pivot>
         </div>
     );
