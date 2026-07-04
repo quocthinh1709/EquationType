@@ -208,7 +208,7 @@ const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
                                 onDismiss={() => setIsCalloutVisible(false)}
                                 directionalHint={DirectionalHint.bottomRightEdge}
                                 isBeakVisible={true}
-                                styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff", maxWidth: "260px" } }}
+                                styles={{ calloutMain: { padding: "5px", backgroundColor: "#ffffff", maxWidth: "100px" } }}
                             >
                                 {/* Đã thay thế onClickCapture thành onClick để fix lỗi không chèn được chữ */}
                                 <div onClick={() => setIsCalloutVisible(false)}>
@@ -596,7 +596,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
                 <PivotItem headerText="Cơ bản"
-                    onRenderItemLink={() => renderLatexTab("\\frac{1}{2}\\sqrt{x}")}>
+                    onRenderItemLink={() => renderLatexTab("\\frac{#?}{#?}")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\frac{#0}{#?}" insertLatex="\frac{#0}{#?}" title="\frac" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="{#0}/{#?}" insertLatex="{#0}/{#?}" title="/" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -619,7 +619,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* TAB 2: TOÁN TỬ & LOGIC */}
                 <PivotItem headerText="Logic"
-                    onRenderItemLink={() => renderLatexTab("\\times \\div")}>
+                    onRenderItemLink={() => renderLatexTab("\\div")}>
                     <OverflowMathGroup>
 
 
@@ -657,7 +657,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* TẬP HỢP */}
                 <PivotItem headerText="Sets"
-                    onRenderItemLink={() => renderLatexTab("\\forall \\in")}>
+                    onRenderItemLink={() => renderLatexTab("\\forall")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\forall" insertLatex="\forall" title="\forall" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\in" insertLatex="\in" title="\in" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -709,7 +709,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* GIẢI TÍCH */}
                 <PivotItem headerText="Giải tích"
-                    onRenderItemLink={() => renderLatexTab("\\textstyle\\int \\Sigma")}>
+                    onRenderItemLink={() => renderLatexTab("\\textstyle\\int")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\int_{#0}^{#1}" insertLatex="\int_{#0}^{#1}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -752,7 +752,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* HÌNH & LƯỢNG GIÁC */}
                 <PivotItem headerText="Lượng giác"
-                    onRenderItemLink={() => renderLatexTab("\\sin \\pi")}>
+                    onRenderItemLink={() => renderLatexTab("\\sin(\\pi)")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\sin" insertLatex="\sin(#?)" title="\sin" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\sin^{-1}" insertLatex="\sin^{-1}(#?)" title="\sin^{-1}" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -803,7 +803,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* Accents*/}
                 <PivotItem headerText="Accents"
-                    onRenderItemLink={() => renderLatexTab("\\bar{#?} \\hat{#?}")}>
+                    onRenderItemLink={() => renderLatexTab("\\dddot{#?}")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\bar{#?}" insertLatex="\bar{#0}" title="\bar" onInsert={onInsert} borderColor={PaletteColors.office} />
                         <MathBtn displayLatex="\bar{\bar{a}}" insertLatex="\bar{\bar{#0}}" title="\bar{\bar{}}" onInsert={onInsert} borderColor={PaletteColors.office} />
@@ -824,7 +824,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* MŨI TÊN */}
                 <PivotItem headerText="Arrows"
-                    onRenderItemLink={() => renderLatexTab("\\rightarrow \\uparrow")}>
+                    onRenderItemLink={() => renderLatexTab("\\rightarrow")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\leftarrow" insertLatex="\leftarrow" title="\leftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\rightarrow" insertLatex="\rightarrow" title="\rightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -856,7 +856,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* Symbols */}
                 <PivotItem headerText="Symbols"
-                    onRenderItemLink={() => renderLatexTab("\\infty \\nabla")}>
+                    onRenderItemLink={() => renderLatexTab("\\infty")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\sim" insertLatex="\sim" title="\sim" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\backsim" insertLatex="\backsim" title="\backsim" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -935,7 +935,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
                 {/* TAB 9: HY LẠP */}
                 <PivotItem headerText="Greek letters"
-                    onRenderItemLink={() => renderLatexTab("\\alpha \\beta")}>
+                    onRenderItemLink={() => renderLatexTab("\\alpha")}>
                     <OverflowMathGroup>
                         {/* Chữ thường */}
                         <MathBtn displayLatex="\alpha" insertLatex="\alpha" title="\alpha" onInsert={onInsert} borderColor={PaletteColors.default} />

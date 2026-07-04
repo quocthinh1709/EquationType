@@ -210,29 +210,21 @@ export default function App() {
             if (vaMatch && vaMatch[1]) {
               verticalAlignEx = parseFloat(vaMatch[1]); 
             }
-            // 1. Lấy kích thước chuẩn xác từ viewBox (đây là cách an toàn nhất)
-            //const vb = svgElement.viewBox.baseVal;
-            //const width = vb.width;
-            //const height = vb.height;
 
-            // 2. QUAN TRỌNG: Gán lại kích thước bằng pixel cho SVG
-            // Nếu không có bước này, Canvas sẽ không biết kích thước ảnh là bao nhiêu
-            //svgElement.setAttribute("width", width + "px");
-            //svgElement.setAttribute("height", height + "px");
-
+            /*
             const canvas = document.createElement("canvas");
-            //const ctx = canvas.getContext("2d");
-
-            // Tăng chất lượng ảnh (Scale)
-            //const scale = window.devicePixelRatio || 1;
-            
-            //canvas.width = width * scale;
-            //canvas.height = height * scale;
-
             canvas.width = Math.ceil(widthPt * PX_PER_PT * RENDER_SCALE);
             canvas.height = Math.ceil(heightPt * PX_PER_PT * RENDER_SCALE);
             svgElement.setAttribute("width", canvas.width + "px");
             svgElement.setAttribute("height", canvas.height + "px");
+            svgElement.setAttribute("xmlns","http://www.w3.org/2000/svg");
+            svgElement.setAttribute("shape-rendering","geometricPrecision");
+            */
+
+            // Xóa bỏ hoàn toàn Canvas và Math.ceil!
+            // Gán trực tiếp giá trị point (pt) với đầy đủ phần thập phân để giữ nguyên tỉ lệ vàng
+            svgElement.setAttribute("width", widthPt + "pt");
+            svgElement.setAttribute("height", heightPt + "pt");
             svgElement.setAttribute("xmlns","http://www.w3.org/2000/svg");
             svgElement.setAttribute("shape-rendering","geometricPrecision");
 
@@ -294,10 +286,17 @@ export default function App() {
 
           // 3. ĐIỀU CHỈNH ĐỘ CAO/THẤP CỦA ẢNH (BASELINE ALIGNMENT)
           const picRange = picture.getRange();
-          if (verticalAlignEx !== 0) {
-              // verticalAlignEx thường là số âm (VD: -0.25). 
-              // font.position nhận giá trị pt. Số âm sẽ kéo ảnh thụt xuống dưới đường baseline.
-              picRange.font.position = verticalAlignEx * exToPt - 0.1; 
+          if (verticalAlignEx !== 0) { 
+              
+            //picRange.font.position = verticalAlignEx * exToPt;  
+
+            //const basePosition = verticalAlignEx * exToPt;
+            //const dynamicOffset = currentFontSize * 0.08;
+            //picRange.font.position = basePosition - dynamicOffset;
+            picRange.font.position = verticalAlignEx * exToPt;  
+              
+          } else {
+            picRange.font.position = 0;
           }
 
           // 4. Bọc Content Control
@@ -332,7 +331,7 @@ export default function App() {
       mf.style.border = "1px solid #8a8886";
       mf.style.borderRadius = "4px";
       mf.style.padding = "10px";
-      mf.style.minHeight = "100px";
+      mf.style.minHeight = "120px";
       mf.style.backgroundColor = "#ffffff";
       mf.style.boxSizing = "border-box";
 
@@ -544,7 +543,7 @@ export default function App() {
             Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
           </MessageBar>
         )}
-        <div style={{ height: "175px" }}>
+        <div style={{ height: "145px" }}>
           <MathPalette onInsert={insertSymbol} />
         </div>
 
@@ -621,7 +620,7 @@ export default function App() {
               if (mathfieldRef.current) mathfieldRef.current.value = e.target.value;
             }}
             style={{
-              width: "100%", minHeight: "50px", marginTop: "4px", padding: "6px", boxSizing: "border-box",
+              width: "100%", minHeight: "60px", marginTop: "4px", padding: "6px", boxSizing: "border-box",
               fontFamily: "Consolas, monospace", fontSize: "13px", color: "#d13438",
               border: "1px solid #ccc", borderRadius: "2px", resize: "vertical"
             }}
