@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
 //import { DefaultButton, Stack, Label } from "@fluentui/react";
-import { DefaultButton,IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, MessageBar, MessageBarType } from "@fluentui/react";
+import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, MessageBar, MessageBarType } from "@fluentui/react";
 //import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
 import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField, Panel, PanelType, SearchBox, ThemeProvider, createTheme } from "@fluentui/react";
 import { initializeIcons } from '@fluentui/react/lib/Icons';
@@ -40,6 +40,7 @@ export default function App() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mathfieldRef = useRef<MathfieldElement | null>(null);
+  const lastEqIdRef = useRef<string>("");
   const [currentLatex, setCurrentLatex] = useState("");
 
   // THÊM BIẾN TRẠNG THÁI LƯU CHẾ ĐỘ CHÈN
@@ -125,17 +126,21 @@ export default function App() {
         await context.sync();
 
         let eqId = "";
+        let targetCC: Word.ContentControl | null = null; //new
 
         // Ưu tiên đọc khi bôi đen
         if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
           eqId = ccs.items[0].tag;
+          targetCC = ccs.items[0]; //new
         }
         // Sau đó đọc khi click chuột
         else if (!cc.isNullObject && cc.title === "LSTS_Math") {
           eqId = cc.tag;
+          targetCC = cc; //new
         }
 
         // Nếu tìm thấy ID, lôi mã LaTeX từ bộ nhớ Word ra
+        /*
         if (eqId) {
           const latexCode = Office.context.document.settings.get(eqId);
           if (latexCode && mathfieldRef.current) {
@@ -144,6 +149,99 @@ export default function App() {
               mathfieldRef.current.value = latexCode;
               setCurrentLatex(latexCode);
             }
+          }
+        }
+        */
+        // --- BẮT ĐẦU PHẦN LOGIC THÔNG MINH MỚI ---
+        if (eqId && targetCC) {
+          // Kiểm tra xem bên trong CC còn ảnh/nội dung thật hay chỉ còn vỏ trống
+          const ccRange = targetCC.getRange();
+          const pics = ccRange.inlinePictures;
+          pics.load("items");
+          ccRange.load("text");
+          await context.sync();
+
+          const cleanText = ccRange.text.replace(/[\r\n\t\u200B-\u200D\uFEFF\uFFFC ]/g, '');
+          const isPlaceholder = cleanText.includes("Click or tap") || cleanText.toLowerCase().includes("văn bản");
+          const isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
+
+          if (isEmptied) {
+            // Cập nhật UI NGAY (không chờ Word xác nhận) để cảm giác tức thời
+            if (mathfieldRef.current) {
+              mathfieldRef.current.value = ""; // Xóa màn hình Math Field
+            }
+            setCurrentLatex("");
+            lastEqIdRef.current = "";
+
+            // Dọn dẹp phía Word ở "hậu trường", không chặn UI nữa
+            targetCC.delete(false);
+            Office.context.document.settings.remove(eqId);
+            Office.context.document.settings.saveAsync();
+            await context.sync();
+          } else {
+            // Vẫn còn công thức -> đọc mã lên Math Field như cũ
+            lastEqIdRef.current = eqId;
+            const latexCode = Office.context.document.settings.get(eqId);
+            if (latexCode && mathfieldRef.current) {
+              if (mathfieldRef.current.value !== latexCode) {
+                mathfieldRef.current.value = latexCode;
+                setCurrentLatex(latexCode);
+              }
+            }
+          }
+        } else {
+          // TRƯỜNG HỢP 2: Click ra ngoài HOẶC vừa bấm xóa ảnh
+          if (lastEqIdRef.current) {
+            const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
+            oldControls.load("items");
+            await context.sync();
+
+            let isDeleted = false;
+
+            if (oldControls.items.length === 0) {
+              // Đã xóa luôn cả lớp vỏ (bôi đen toàn bộ rồi xóa)
+              isDeleted = true;
+            } else {
+              // Ảnh bị xóa nhưng vỏ vẫn còn (Placeholder "Click or tap here...")
+              // Tình huống B: Lớp vỏ vẫn còn, cần kiểm tra xem bên trong là công thức hay Placeholder
+              const cc = oldControls.items[0];
+              const ccRange = cc.getRange();
+
+              // BỎ oMaths. Chỉ yêu cầu Word load danh sách ảnh và toàn bộ chữ bên trong
+              const pics = ccRange.inlinePictures;
+              pics.load("items");
+              ccRange.load("text");
+
+              await context.sync();
+
+              // Loại bỏ toàn bộ khoảng trắng và ký tự ẩn để so sánh cho chuẩn
+              const cleanText = ccRange.text.replace(/[\r\n\t\u200B-\u200D\uFEFF\uFFFC ]/g, '');
+
+              // Nhận diện dòng chữ Placeholder mặc định của Word 
+              // (Hỗ trợ cả Office Tiếng Anh "Click or tap..." và Tiếng Việt "...văn bản")
+              const isPlaceholder = cleanText.includes("Click or tap") || cleanText.toLowerCase().includes("văn bản");
+
+              // Nếu KHÔNG có ảnh nào VÀ ruột chỉ chứa dòng chữ Placeholder (hoặc trống rỗng)
+              // -> Chắc chắn công thức đã bị xóa, tiêu hủy lớp vỏ ngay!
+              if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+                isDeleted = true;
+                cc.delete(false);
+                await context.sync();
+              }
+            }
+
+            // Tiến hành dọn dẹp Add-in nếu phát hiện xóa
+            if (isDeleted) {
+              if (mathfieldRef.current) {
+                mathfieldRef.current.value = ""; // Xóa màn hình Math Field
+              }
+              setCurrentLatex("");
+
+              // Xóa mã LaTeX trong bộ nhớ ngầm của Word
+              Office.context.document.settings.remove(lastEqIdRef.current);
+              Office.context.document.settings.saveAsync();
+            }
+            lastEqIdRef.current = ""; // Reset bộ nhớ tạm
           }
         }
       });
@@ -170,7 +268,7 @@ export default function App() {
 
     if (insertMode === "mathml") {
       // ... (Phần MathML
-      
+
       const hiddenDiv = document.createElement("div");
       hiddenDiv.style.display = "none";
       document.body.appendChild(hiddenDiv);
@@ -180,7 +278,7 @@ export default function App() {
       const mathML = tempMf.getValue("math-ml" as any);
       document.body.removeChild(hiddenDiv);
       insertContent = mathML.includes("<math") ? mathML : `<math xmlns="http://www.w3.org/1998/Math/MathML">${mathML}</math>`;
-      
+
     } else {
       // [B] CHỌN SVG CẢI TIẾN
       try {
@@ -208,7 +306,7 @@ export default function App() {
             const styleStr = svgElement.getAttribute("style") || "";
             const vaMatch = styleStr.match(/vertical-align:\s*([-0-9.]+)ex/);
             if (vaMatch && vaMatch[1]) {
-              verticalAlignEx = parseFloat(vaMatch[1]); 
+              verticalAlignEx = parseFloat(vaMatch[1]);
             }
 
             /*
@@ -225,16 +323,16 @@ export default function App() {
             // Gán trực tiếp giá trị point (pt) với đầy đủ phần thập phân để giữ nguyên tỉ lệ vàng
             svgElement.setAttribute("width", widthPt + "pt");
             svgElement.setAttribute("height", heightPt + "pt");
-            svgElement.setAttribute("xmlns","http://www.w3.org/2000/svg");
-            svgElement.setAttribute("shape-rendering","geometricPrecision");
+            svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+            svgElement.setAttribute("shape-rendering", "geometricPrecision");
 
             let svgData = new XMLSerializer().serializeToString(svgElement);
-            
+
             svgData = svgData.replace(/currentColor/gi, "#000000");
             const utf8Encoded = encodeURIComponent(svgData).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
-                return String.fromCharCode(parseInt(p1, 16));
+              return String.fromCharCode(parseInt(p1, 16));
             });
-            
+
             insertContent = window.btoa(utf8Encoded);
             isInsertingImage = true;
 
@@ -258,7 +356,7 @@ export default function App() {
         // ---> THÊM BƯỚC ĐỌC FONT CHỮ CỦA WORD <---
         range.load("font/size");
         await context.sync();
-        
+
         // Lấy cỡ chữ hiện tại, nếu người dùng đang bôi đen nhiều cỡ chữ khác nhau thì mặc định lấy 12
         const currentFontSize = range.font.size || 12;
 
@@ -273,11 +371,11 @@ export default function App() {
 
           // 3. ĐIỀU CHỈNH KÍCH THƯỚC KHỚP VỚI FONT CHỮ
           // Hệ số chuyển đổi từ "ex" sang "points" của Word
-          const exToPt = currentFontSize * 0.44; 
-          
+          const exToPt = currentFontSize * 0.44;
+
           if (mathWidthEx > 0 && mathHeightEx > 0) {
-              picture.width = mathWidthEx * exToPt;
-              picture.height = mathHeightEx * exToPt;
+            picture.width = mathWidthEx * exToPt;
+            picture.height = mathHeightEx * exToPt;
           }
           picture.lockAspectRatio = true;
 
@@ -286,15 +384,15 @@ export default function App() {
 
           // 3. ĐIỀU CHỈNH ĐỘ CAO/THẤP CỦA ẢNH (BASELINE ALIGNMENT)
           const picRange = picture.getRange();
-          if (verticalAlignEx !== 0) { 
-              
+          if (verticalAlignEx !== 0) {
+
             //picRange.font.position = verticalAlignEx * exToPt;  
 
             //const basePosition = verticalAlignEx * exToPt;
             //const dynamicOffset = currentFontSize * 0.08;
             //picRange.font.position = basePosition - dynamicOffset;
-            picRange.font.position = verticalAlignEx * exToPt;  
-              
+            picRange.font.position = verticalAlignEx * exToPt;
+
           } else {
             picRange.font.position = 0;
           }
@@ -314,6 +412,9 @@ export default function App() {
           newCc.appearance = Word.ContentControlAppearance.hidden;
         }
         await context.sync();
+
+        
+
       });
     } catch (error) {
       console.error("Lỗi chèn vào Word:", error);
@@ -386,7 +487,7 @@ export default function App() {
     if (mathfieldRef.current) {
       mathfieldRef.current.insert(latexCode);
       mathfieldRef.current.focus();
-      
+
     }
   };
 
@@ -397,12 +498,12 @@ export default function App() {
       alert("Vui lòng nhập phím tắt!");
       return;
     }
-    
+
     // Cập nhật State
     const updatedDict = { ...userDict };
     updatedDict[dictType][dictKey.trim()] = currentLatex; // Lấy mã LaTeX hiện tại trên màn hình
     setUserDict(updatedDict);
-    
+
     // Lưu vào LocalStorage
     localStorage.setItem("math_user_dict", JSON.stringify(updatedDict));
 
@@ -431,7 +532,7 @@ export default function App() {
     downloadNode.remove();
   };
 
-   // Hàm Nhập File JSON (Gộp và bảo vệ dữ liệu cũ)
+  // Hàm Nhập File JSON (Gộp và bảo vệ dữ liệu cũ)
   const handleImportDict = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -440,10 +541,10 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const importedData = JSON.parse(e.target?.result as string);
-        
+
         // Kiểm tra cấu trúc file import
         if (importedData.inline && importedData.macro) {
-          
+
           // --- LOGIC GỘP AN TOÀN ---
           // Đặt importedData lên trước, userDict lên sau.
           // Nếu có phím tắt trùng tên, công thức cũ của người dùng sẽ được ưu tiên giữ nguyên!
@@ -455,14 +556,14 @@ export default function App() {
           // Lưu State và LocalStorage
           setUserDict(mergedDict);
           localStorage.setItem("math_user_dict", JSON.stringify(mergedDict));
-          
+
           // Cập nhật nóng vào giao diện MathLive đang mở
           if (mathfieldRef.current) {
             mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...mergedDict.inline };
             //mathfieldRef.current.macros = { ...customMacros, ...mergedDict.macro };
             mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(mergedDict.macro) };
           }
-          
+
           alert("Nhập từ điển thành công! Các phím tắt cũ của bạn vẫn được giữ nguyên an toàn.");
         } else {
           alert("Cấu trúc file JSON không đúng chuẩn từ điển (Thiếu inline hoặc macro)!");
@@ -478,13 +579,13 @@ export default function App() {
   // Mở giao diện: Chuyển Từ điển (Object) thành Danh sách (Array) để dễ bề chỉnh sửa
   const handleOpenEditDict = () => {
     const items: EditItem[] = [];
-    Object.entries(userDict.inline).forEach(([k, v]) => 
+    Object.entries(userDict.inline).forEach(([k, v]) =>
       items.push({ id: `in_${k}_${Date.now()}`, type: "inline", key: k, value: v })
     );
-    Object.entries(userDict.macro).forEach(([k, v]) => 
+    Object.entries(userDict.macro).forEach(([k, v]) =>
       items.push({ id: `mc_${k}_${Date.now()}`, type: "macro", key: k, value: v })
     );
-    
+
     setEditItems(items);
     setSearchTerm("");
     setIsEditDictOpen(true);
@@ -492,7 +593,7 @@ export default function App() {
 
   // Hàm cập nhật (Chấp cả sửa Key lẫn Value)
   const handleItemChange = (id: string, field: "key" | "value", newValue: string) => {
-    setEditItems(prev => prev.map(item => 
+    setEditItems(prev => prev.map(item =>
       item.id === id ? { ...item, [field]: newValue } : item
     ));
   };
@@ -505,7 +606,7 @@ export default function App() {
   // Lưu lại: Chuyển ngược từ Danh sách (Array) về lại Từ điển (Object)
   const handleSaveEditedDict = () => {
     const newDict = { inline: {} as Record<string, string>, macro: {} as Record<string, string> };
-    
+
     editItems.forEach(item => {
       const k = item.key.trim();
       if (k) { // Bỏ qua nếu người dùng vô tình xóa trắng ô Key
@@ -515,7 +616,7 @@ export default function App() {
 
     setUserDict(newDict);
     localStorage.setItem("math_user_dict", JSON.stringify(newDict));
-    
+
     if (mathfieldRef.current) {
       mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...newDict.inline };
       //mathfieldRef.current.macros = { ...customMacros, ...newDict.macro };
@@ -526,267 +627,267 @@ export default function App() {
 
   return (
     <ThemeProvider theme={officeGreenTheme}>
-    <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
-      <Stack tokens={{ childrenGap: 12 }}>
-        {/*
+      <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
+        <Stack tokens={{ childrenGap: 12 }}>
+          {/*
         <Label style={{ fontSize: "18px", fontWeight: "bold", color: "#107c41" }}>
           {title} - Công cụ Toán học
         </Label>
         */}
-        {/* HIỂN THỊ CẢNH BÁO NẾU LÀ WORD ONLINE */}
-        {isOnline && (
-          <MessageBar
-            messageBarType={MessageBarType.blocked}
-            isMultiline={true}
-          >
-            <strong>Phiên bản Web không được hỗ trợ chèn vào Word!</strong><br />
-            Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
-          </MessageBar>
-        )}
-        <div style={{ height: "145px" }}>
-          <MathPalette onInsert={insertSymbol} />
-        </div>
+          {/* HIỂN THỊ CẢNH BÁO NẾU LÀ WORD ONLINE */}
+          {isOnline && (
+            <MessageBar
+              messageBarType={MessageBarType.blocked}
+              isMultiline={true}
+            >
+              <strong>Phiên bản Web không được hỗ trợ chèn vào Word!</strong><br />
+              Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
+            </MessageBar>
+          )}
+          <div style={{ height: "145px" }}>
+            <MathPalette onInsert={insertSymbol} />
+          </div>
 
-        <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
-        <div ref={containerRef} id="mathfield-container" />
+          <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
+          <div ref={containerRef} id="mathfield-container" />
 
-        {/* Ô CODE ĐỒNG BỘ 2 CHIỀU */}
-        <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
-          {/*
+          {/* Ô CODE ĐỒNG BỘ 2 CHIỀU */}
+          <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
+            {/*
           <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
             */}
-          <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "4px" }}>
-            <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
-            
-            <Stack horizontal tokens={{ childrenGap: 6 }} verticalAlign="center">
-              {/* Input ẩn */}
-              <input type="file" accept=".json" ref={fileInputRef} style={{ display: "none" }} onChange={handleImportDict} />
-              
-              {/* Nút Nhập / Xuất (Có Icon, bo góc) */}
-              <DefaultButton 
-                iconProps={{ iconName: 'Upload' }} 
-                //text="Import"
-                title="Import Dictionary" 
-                onClick={() => fileInputRef.current?.click()} 
-                styles={{ 
-                  root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, 
-                  icon: { fontSize: 12 } 
-                }} 
-              />
-              <DefaultButton 
-                iconProps={{ iconName: 'Download' }} 
-                //text="Export"
-                title="Export Dictionary" 
-                onClick={handleExportDict} 
-                styles={{ 
-                  root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, 
-                  icon: { fontSize: 12 } 
-                }} 
-              />
+            <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "4px" }}>
+              <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
 
-              {/* THÊM NÚT SỬA VÀO ĐÂY */}
-              <DefaultButton 
-                iconProps={{ iconName: 'Edit' }} 
-                //text="Edit"
-                title="Edit Dictionary" 
-                onClick={handleOpenEditDict} 
-                styles={{ 
-                  root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, 
-                  icon: { fontSize: 12 } 
-                }} 
-              />
+              <Stack horizontal tokens={{ childrenGap: 6 }} verticalAlign="center">
+                {/* Input ẩn */}
+                <input type="file" accept=".json" ref={fileInputRef} style={{ display: "none" }} onChange={handleImportDict} />
 
-              {/* Nút Lưu Từ điển (Thêm Icon Save, bo góc, màu xanh lá đồng bộ) */}
-              <DefaultButton 
-                iconProps={{ iconName: 'Save' }} 
-                text="Save to Dict" 
-                title="Save to Dictionary" 
-                onClick={() => setIsAddDictOpen(true)}
-                disabled={!currentLatex}
-                styles={{ 
-                  root: { height: 24, fontSize: 12, padding: "0 10px", marginLeft: "4px", borderRadius: "6px" },
-                  rootDisabled: { backgroundColor: "transparent" },
-                  label: { fontWeight: "bold", color: currentLatex ? "#107c41" : undefined },
-                  icon: { fontSize: 12, color: currentLatex ? "#107c41" : undefined }
-                }} 
-              />
+                {/* Nút Nhập / Xuất (Có Icon, bo góc) */}
+                <DefaultButton
+                  iconProps={{ iconName: 'Upload' }}
+                  //text="Import"
+                  title="Import Dictionary"
+                  onClick={() => fileInputRef.current?.click()}
+                  styles={{
+                    root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 },
+                    icon: { fontSize: 12 }
+                  }}
+                />
+                <DefaultButton
+                  iconProps={{ iconName: 'Download' }}
+                  //text="Export"
+                  title="Export Dictionary"
+                  onClick={handleExportDict}
+                  styles={{
+                    root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 },
+                    icon: { fontSize: 12 }
+                  }}
+                />
+
+                {/* THÊM NÚT SỬA VÀO ĐÂY */}
+                <DefaultButton
+                  iconProps={{ iconName: 'Edit' }}
+                  //text="Edit"
+                  title="Edit Dictionary"
+                  onClick={handleOpenEditDict}
+                  styles={{
+                    root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 },
+                    icon: { fontSize: 12 }
+                  }}
+                />
+
+                {/* Nút Lưu Từ điển (Thêm Icon Save, bo góc, màu xanh lá đồng bộ) */}
+                <DefaultButton
+                  iconProps={{ iconName: 'Save' }}
+                  text="Save to Dict"
+                  title="Save to Dictionary"
+                  onClick={() => setIsAddDictOpen(true)}
+                  disabled={!currentLatex}
+                  styles={{
+                    root: { height: 24, fontSize: 12, padding: "0 10px", marginLeft: "4px", borderRadius: "6px" },
+                    rootDisabled: { backgroundColor: "transparent" },
+                    label: { fontWeight: "bold", color: currentLatex ? "#107c41" : undefined },
+                    icon: { fontSize: 12, color: currentLatex ? "#107c41" : undefined }
+                  }}
+                />
+              </Stack>
             </Stack>
-          </Stack>
 
-          <textarea
-            value={currentLatex}
-            onChange={(e) => {
-              setCurrentLatex(e.target.value);
-              if (mathfieldRef.current) mathfieldRef.current.value = e.target.value;
-            }}
-            style={{
-              width: "100%", minHeight: "60px", marginTop: "4px", padding: "6px", boxSizing: "border-box",
-              fontFamily: "Consolas, monospace", fontSize: "13px", color: "#d13438",
-              border: "1px solid #ccc", borderRadius: "2px", resize: "vertical"
-            }}
-          />
-        </div>
-        <Stack 
-          horizontal 
-          horizontalAlign="space-between" 
-          verticalAlign="center" // Căn giữa nút chèn theo chiều cao của cụm bên trái
-          tokens={{ childrenGap: 16 }}
-          style={{ marginTop: "12px", marginBottom: "10px" }}
-        >
-        {/* NÚT CHỌN ĐỊNH DẠNG CHÈN */}
-        
-        <Stack tokens={{ childrenGap: 4 }} style={{ flexGrow: 1 }}>
-          <Toggle
-            label="Mode:"
-            inlineLabel
-            onText={isUnsupported ? "E-Editor (Only)" : "E-Editor"}
-            offText="Office"
-            checked={insertMode === "svg"}
-            onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
-            disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ
-            styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }}
-          />
-          
-          {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
-          {isUnsupported && (
-            <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
-              ⚠️ Office Math is not supported. Insert E-Editor type only.
-            </Label>
-          )}
-         
-        </Stack>
-
-        {/* NÚT CHÈN */}
-        <DefaultButton
-          primary
-          text="Insert/Update"
-          onClick={handleInsertEquation}
-          style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
-          title="Insert new equation or update selected equation"
-        />
-
-         </Stack> 
-
-        {/* DIALOG NHẬP TÊN TỪ ĐIỂN (Nằm ngầm, chỉ hiện khi bấm "+ Lưu vào từ điển") */}
-        <Dialog
-          hidden={!isAddDictOpen}
-          onDismiss={() => setIsAddDictOpen(false)}
-          dialogContentProps={{
-            type: DialogType.normal,
-            title: 'Thêm vào từ điển',
-            subText: 'Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.'
-          }}
-        >
-          <ChoiceGroup
-            options={[
-              { key: 'inline', text: 'Inline (Tự động chuyển đổi khi gõ)' },
-              { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước để gợi ý)' }
-            ]}
-            selectedKey={dictType}
-            onChange={(_, option) => setDictType(option?.key as "inline" | "macro")}
-          />
-          <TextField 
-            label="Shortcut key (không gõ '\' ở trước)" 
-            placeholder="VD: ptb, hpt..." 
-            value={dictKey} 
-            onChange={(_, val) => setDictKey(val || "")} 
-            styles={{ 
-              root: { marginTop: 10 },
-              fieldGroup: { height: 40 }, // Tăng chiều cao của khung viền lên 40px
-              field: { fontSize: "15px", padding: "8px" } // Tăng nhẹ cỡ chữ để cân đối với chiều cao mới
-            }}
-          />
-          <DialogFooter>
-            <PrimaryButton onClick={handleSaveToDict} text="Lưu" />
-            <DefaultButton onClick={() => setIsAddDictOpen(false)} text="Hủy" />
-          </DialogFooter>
-        </Dialog>
-        
-        {/* PANEL QUẢN LÝ VÀ TÌM KIẾM TỪ ĐIỂN */}
-        <Panel
-          isOpen={isEditDictOpen}
-          onDismiss={() => setIsEditDictOpen(false)}
-          type={PanelType.medium}
-          headerText="Quản lý Từ điển"
-          closeButtonAriaLabel="Đóng"
-        >
-          <SearchBox
-            placeholder="Tìm phím tắt hoặc mã LaTeX..."
-            value={searchTerm}
-            onChange={(_, newValue) => setSearchTerm(newValue || "")}
-            styles={{ root: { marginBottom: "16px", marginTop: "10px" } }}
-          />
-
-          <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px", overflowX: "hidden" }}>
-            {["inline", "macro"].map((type) => {
-              // 1. Lọc danh sách theo loại và từ khóa
-              const filteredItems = editItems.filter(item => 
-                item.type === type && 
-                (item.key.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                 item.value.toLowerCase().includes(searchTerm.toLowerCase()))
-              );
-
-              if (filteredItems.length === 0) return null;
-
-              // 2. CẮT LẤY TỐI ĐA 10 ITEM ĐỂ TỐI ƯU HIỆU SUẤT
-              const displayItems = filteredItems.slice(0, 10);
-
-              return (
-                <div key={type} style={{ marginBottom: "20px" }}>
-                  <Label style={{ color: "#107c41", borderBottom: "1px solid #c8c6c4", paddingBottom: "4px", marginBottom: "8px" }}>
-                    {type === "inline" ? "Phím tắt gõ nhanh (Inline)" : "Lệnh Macro (\\)"}
-                  </Label>
-                  
-                  {displayItems.map((item) => (
-                    <Stack horizontal verticalAlign="start" tokens={{ childrenGap: 8 }} key={item.id} style={{ marginBottom: "12px" }}>
-                      
-                      <TextField 
-                        value={item.key} 
-                        placeholder="Mã lệnh..."
-                        onChange={(_, val) => handleItemChange(item.id, "key", val || "")}
-                        styles={{ root: { width: "100px" }, field: { fontWeight: "bold" } }} 
-                      />
-                      
-                      <TextField 
-                        multiline 
-                        autoAdjustHeight 
-                        value={item.value} 
-                        onChange={(_, val) => handleItemChange(item.id, "value", val || "")}
-                        styles={{ root: { flexGrow: 1 }, field: { fontFamily: "Consolas, monospace", fontSize: "13px" } }} 
-                      />
-                      
-                      <IconButton 
-                        iconProps={{ iconName: 'Delete' }} 
-                        title="Xóa phím tắt này" 
-                        onClick={() => handleItemDelete(item.id)} 
-                        styles={{ root: { color: "#d13438" }, rootHovered: { backgroundColor: "#fde7e9" } }} 
-                      />
-                    </Stack>
-                  ))}
-
-                  {/* 3. HIỂN THỊ THÔNG BÁO NẾU CÓ NHIỀU HƠN 10 KẾT QUẢ */}
-                  {filteredItems.length > 10 && (
-                    <Label style={{ fontStyle: "italic", color: "#d13438", fontSize: "12px", marginTop: "4px" }}>
-                      * Đang hiển thị 10 / {filteredItems.length} kết quả. Hãy nhập thêm từ khóa để tìm chính xác hơn.
-                    </Label>
-                  )}
-                </div>
-              );
-            })}
-            
-            {editItems.length === 0 && (
-              <Label style={{ fontStyle: "italic", color: "#a19f9d" }}>Từ điển đang trống.</Label>
-            )}
+            <textarea
+              value={currentLatex}
+              onChange={(e) => {
+                setCurrentLatex(e.target.value);
+                if (mathfieldRef.current) mathfieldRef.current.value = e.target.value;
+              }}
+              style={{
+                width: "100%", minHeight: "60px", marginTop: "4px", padding: "6px", boxSizing: "border-box",
+                fontFamily: "Consolas, monospace", fontSize: "13px", color: "#d13438",
+                border: "1px solid #ccc", borderRadius: "2px", resize: "vertical"
+              }}
+            />
           </div>
-          
-          <Stack horizontal tokens={{ childrenGap: 10 }} style={{ marginTop: "20px" }}>
-            <PrimaryButton iconProps={{ iconName: 'Save' }} text="Lưu thay đổi" onClick={handleSaveEditedDict} />
-            <DefaultButton text="Hủy" onClick={() => setIsEditDictOpen(false)} />
-          </Stack>
-        </Panel>
+          <Stack
+            horizontal
+            horizontalAlign="space-between"
+            verticalAlign="center" // Căn giữa nút chèn theo chiều cao của cụm bên trái
+            tokens={{ childrenGap: 16 }}
+            style={{ marginTop: "12px", marginBottom: "10px" }}
+          >
+            {/* NÚT CHỌN ĐỊNH DẠNG CHÈN */}
 
-      </Stack>
-    </div>
+            <Stack tokens={{ childrenGap: 4 }} style={{ flexGrow: 1 }}>
+              <Toggle
+                label="Mode:"
+                inlineLabel
+                onText={isUnsupported ? "E-Editor (Only)" : "E-Editor"}
+                offText="Office"
+                checked={insertMode === "svg"}
+                onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
+                disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ
+                styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }}
+              />
+
+              {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
+              {isUnsupported && (
+                <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
+                  ⚠️ Office Math is not supported. Insert E-Editor type only.
+                </Label>
+              )}
+
+            </Stack>
+
+            {/* NÚT CHÈN */}
+            <DefaultButton
+              primary
+              text="Insert/Update"
+              onClick={handleInsertEquation}
+              style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
+              title="Insert new equation or update selected equation"
+            />
+
+          </Stack>
+
+          {/* DIALOG NHẬP TÊN TỪ ĐIỂN (Nằm ngầm, chỉ hiện khi bấm "+ Lưu vào từ điển") */}
+          <Dialog
+            hidden={!isAddDictOpen}
+            onDismiss={() => setIsAddDictOpen(false)}
+            dialogContentProps={{
+              type: DialogType.normal,
+              title: 'Thêm vào từ điển',
+              subText: 'Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.'
+            }}
+          >
+            <ChoiceGroup
+              options={[
+                { key: 'inline', text: 'Inline (Tự động chuyển đổi khi gõ)' },
+                { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước để gợi ý)' }
+              ]}
+              selectedKey={dictType}
+              onChange={(_, option) => setDictType(option?.key as "inline" | "macro")}
+            />
+            <TextField
+              label="Shortcut key (không gõ '\' ở trước)"
+              placeholder="VD: ptb, hpt..."
+              value={dictKey}
+              onChange={(_, val) => setDictKey(val || "")}
+              styles={{
+                root: { marginTop: 10 },
+                fieldGroup: { height: 40 }, // Tăng chiều cao của khung viền lên 40px
+                field: { fontSize: "15px", padding: "8px" } // Tăng nhẹ cỡ chữ để cân đối với chiều cao mới
+              }}
+            />
+            <DialogFooter>
+              <PrimaryButton onClick={handleSaveToDict} text="Lưu" />
+              <DefaultButton onClick={() => setIsAddDictOpen(false)} text="Hủy" />
+            </DialogFooter>
+          </Dialog>
+
+          {/* PANEL QUẢN LÝ VÀ TÌM KIẾM TỪ ĐIỂN */}
+          <Panel
+            isOpen={isEditDictOpen}
+            onDismiss={() => setIsEditDictOpen(false)}
+            type={PanelType.medium}
+            headerText="Quản lý Từ điển"
+            closeButtonAriaLabel="Đóng"
+          >
+            <SearchBox
+              placeholder="Tìm phím tắt hoặc mã LaTeX..."
+              value={searchTerm}
+              onChange={(_, newValue) => setSearchTerm(newValue || "")}
+              styles={{ root: { marginBottom: "16px", marginTop: "10px" } }}
+            />
+
+            <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px", overflowX: "hidden" }}>
+              {["inline", "macro"].map((type) => {
+                // 1. Lọc danh sách theo loại và từ khóa
+                const filteredItems = editItems.filter(item =>
+                  item.type === type &&
+                  (item.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    item.value.toLowerCase().includes(searchTerm.toLowerCase()))
+                );
+
+                if (filteredItems.length === 0) return null;
+
+                // 2. CẮT LẤY TỐI ĐA 10 ITEM ĐỂ TỐI ƯU HIỆU SUẤT
+                const displayItems = filteredItems.slice(0, 10);
+
+                return (
+                  <div key={type} style={{ marginBottom: "20px" }}>
+                    <Label style={{ color: "#107c41", borderBottom: "1px solid #c8c6c4", paddingBottom: "4px", marginBottom: "8px" }}>
+                      {type === "inline" ? "Phím tắt gõ nhanh (Inline)" : "Lệnh Macro (\\)"}
+                    </Label>
+
+                    {displayItems.map((item) => (
+                      <Stack horizontal verticalAlign="start" tokens={{ childrenGap: 8 }} key={item.id} style={{ marginBottom: "12px" }}>
+
+                        <TextField
+                          value={item.key}
+                          placeholder="Mã lệnh..."
+                          onChange={(_, val) => handleItemChange(item.id, "key", val || "")}
+                          styles={{ root: { width: "100px" }, field: { fontWeight: "bold" } }}
+                        />
+
+                        <TextField
+                          multiline
+                          autoAdjustHeight
+                          value={item.value}
+                          onChange={(_, val) => handleItemChange(item.id, "value", val || "")}
+                          styles={{ root: { flexGrow: 1 }, field: { fontFamily: "Consolas, monospace", fontSize: "13px" } }}
+                        />
+
+                        <IconButton
+                          iconProps={{ iconName: 'Delete' }}
+                          title="Xóa phím tắt này"
+                          onClick={() => handleItemDelete(item.id)}
+                          styles={{ root: { color: "#d13438" }, rootHovered: { backgroundColor: "#fde7e9" } }}
+                        />
+                      </Stack>
+                    ))}
+
+                    {/* 3. HIỂN THỊ THÔNG BÁO NẾU CÓ NHIỀU HƠN 10 KẾT QUẢ */}
+                    {filteredItems.length > 10 && (
+                      <Label style={{ fontStyle: "italic", color: "#d13438", fontSize: "12px", marginTop: "4px" }}>
+                        * Đang hiển thị 10 / {filteredItems.length} kết quả. Hãy nhập thêm từ khóa để tìm chính xác hơn.
+                      </Label>
+                    )}
+                  </div>
+                );
+              })}
+
+              {editItems.length === 0 && (
+                <Label style={{ fontStyle: "italic", color: "#a19f9d" }}>Từ điển đang trống.</Label>
+              )}
+            </div>
+
+            <Stack horizontal tokens={{ childrenGap: 10 }} style={{ marginTop: "20px" }}>
+              <PrimaryButton iconProps={{ iconName: 'Save' }} text="Lưu thay đổi" onClick={handleSaveEditedDict} />
+              <DefaultButton text="Hủy" onClick={() => setIsEditDictOpen(false)} />
+            </Stack>
+          </Panel>
+
+        </Stack>
+      </div>
     </ThemeProvider>
   );
 }

@@ -15,7 +15,18 @@
     
     <script>
       window.MathJax = {
-        loader: { load: ['output/svg'] },
+        loader: { 
+          load: [
+            'output/svg',
+            '[tex]/noerrors',
+            '[tex]/enclose',
+            '[tex]/color',
+            '[tex]/physics',
+            '[tex]/cancel',
+            '[tex]/extpfeil',
+            '[tex]/mathtools',
+            '[tex]/mhchem'
+          ] },
         tex: { 
           // Bổ sung hàng loạt các gói mạnh mẽ nhất của TeX
           packages: {
