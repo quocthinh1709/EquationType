@@ -81,11 +81,6 @@ export default function App() {
     }
   }, [isUnsupported, insertMode]);
 
-  // ĐỊNH NGHĨA 2 LỰA CHỌN CHO NGƯỜI DÙNG
-  const modeOptions: IChoiceGroupOption[] = [
-    { key: "mathml", text: "Mã MathML" },
-    { key: "svg", text: "Ảnh" }
-  ];
 
   // ==========================================
   // BỘ LỌC TỰ ĐỘNG: Biến mọi chuỗi Macro tĩnh thành Macro Động (Có gợi ý + Cho phép Sửa)
@@ -108,80 +103,107 @@ export default function App() {
   };
 
   // ==========================================
-  // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN (KHI BÔI ĐEN/CLICK)
+  // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN VÀ DỌN RÁC
   // ==========================================
   const handleReadEquation = useCallback(async () => {
     try {
       await Word.run(async (context) => {
         const range = context.document.getSelection();
 
-        // Bắt trường hợp nhấp nháy chuột bên trong
         const cc = range.parentContentControlOrNullObject;
         cc.load("title, tag");
 
-        // Bắt trường hợp bôi đen toàn bộ công thức
         const ccs = range.contentControls;
         ccs.load("items/title, items/tag");
 
         await context.sync();
 
-        let eqId = "";
-        let targetCC: Word.ContentControl | null = null; //new
+        let newEqId = "";
+        let newTargetCC: Word.ContentControl | null = null;
 
         // Ưu tiên đọc khi bôi đen
         if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
-          eqId = ccs.items[0].tag;
-          targetCC = ccs.items[0]; //new
+          newEqId = ccs.items[0].tag;
+          newTargetCC = ccs.items[0];
         }
         // Sau đó đọc khi click chuột
         else if (!cc.isNullObject && cc.title === "LSTS_Math") {
-          eqId = cc.tag;
-          targetCC = cc; //new
+          newEqId = cc.tag;
+          newTargetCC = cc;
         }
 
-        // Nếu tìm thấy ID, lôi mã LaTeX từ bộ nhớ Word ra
-        /*
-        if (eqId) {
-          const latexCode = Office.context.document.settings.get(eqId);
-          if (latexCode && mathfieldRef.current) {
-            // Cập nhật lại khung hình và khung code
-            if (mathfieldRef.current.value !== latexCode) {
-              mathfieldRef.current.value = latexCode;
-              setCurrentLatex(latexCode);
+        // ========================================================
+        // BƯỚC 1: KIỂM TRA VÀ DỌN DẸP VỎ RÁC CỦA CÔNG THỨC CŨ
+        // ========================================================
+        // Nếu trước đó có chọn 1 công thức, và bây giờ vừa click sang chỗ khác
+        if (lastEqIdRef.current && lastEqIdRef.current !== newEqId) {
+          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
+          oldControls.load("items");
+          await context.sync();
+
+          let isOldDeleted = false;
+
+          if (oldControls.items.length === 0) {
+            isOldDeleted = true;
+          } else {
+            const oldCC = oldControls.items[0];
+            const oldRange = oldCC.getRange();
+            const oldPics = oldRange.inlinePictures;
+            oldPics.load("items");
+            oldRange.load("text");
+            await context.sync();
+
+            // Loại bỏ khoảng trắng và ký tự ẩn để so sánh
+            const cleanText = oldRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+
+            if (oldPics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+              isOldDeleted = true;
+              oldCC.delete(false); // Tiêu hủy vỏ rác cũ
+              await context.sync();
+            }
+          }
+
+          // Dọn dẹp bộ nhớ ngầm
+          if (isOldDeleted) {
+            Office.context.document.settings.remove(lastEqIdRef.current);
+            Office.context.document.settings.saveAsync();
+            // Nếu click ra chỗ trống (không phải công thức mới), thì xóa luôn Math Field
+            if (!newEqId) {
+              if (mathfieldRef.current) mathfieldRef.current.value = "";
+              setCurrentLatex("");
             }
           }
         }
-        */
-        // --- BẮT ĐẦU PHẦN LOGIC THÔNG MINH MỚI ---
-        if (eqId && targetCC) {
-          // Kiểm tra xem bên trong CC còn ảnh/nội dung thật hay chỉ còn vỏ trống
-          const ccRange = targetCC.getRange();
+
+        // ========================================================
+        // BƯỚC 2: XỬ LÝ CÔNG THỨC MỚI ĐƯỢC CHỌN (NẾU CÓ)
+        // ========================================================
+        if (newEqId && newTargetCC) {
+          lastEqIdRef.current = newEqId; // Cập nhật ID mới
+
+          const ccRange = newTargetCC.getRange();
           const pics = ccRange.inlinePictures;
           pics.load("items");
           ccRange.load("text");
           await context.sync();
 
-          const cleanText = ccRange.text.replace(/[\r\n\t\u200B-\u200D\uFEFF\uFFFC ]/g, '');
-          const isPlaceholder = cleanText.includes("Click or tap") || cleanText.toLowerCase().includes("văn bản");
-          const isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
-
-          if (isEmptied) {
-            // Cập nhật UI NGAY (không chờ Word xác nhận) để cảm giác tức thời
-            if (mathfieldRef.current) {
-              mathfieldRef.current.value = ""; // Xóa màn hình Math Field
-            }
+          const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+          const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+          
+          // Đề phòng trường hợp click trúng cái vỏ rác chưa kịp xóa
+          if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+            if (mathfieldRef.current) mathfieldRef.current.value = "";
             setCurrentLatex("");
             lastEqIdRef.current = "";
 
-            // Dọn dẹp phía Word ở "hậu trường", không chặn UI nữa
-            targetCC.delete(false);
-            Office.context.document.settings.remove(eqId);
+            newTargetCC.delete(false); // Tiêu hủy
+            Office.context.document.settings.remove(newEqId);
             Office.context.document.settings.saveAsync();
             await context.sync();
           } else {
-            // Vẫn còn công thức -> đọc mã lên Math Field như cũ
-            lastEqIdRef.current = eqId;
-            const latexCode = Office.context.document.settings.get(eqId);
+            // Đọc mã Code lên Math Field
+            const latexCode = Office.context.document.settings.get(newEqId);
             if (latexCode && mathfieldRef.current) {
               if (mathfieldRef.current.value !== latexCode) {
                 mathfieldRef.current.value = latexCode;
@@ -190,63 +212,12 @@ export default function App() {
             }
           }
         } else {
-          // TRƯỜNG HỢP 2: Click ra ngoài HOẶC vừa bấm xóa ảnh
-          if (lastEqIdRef.current) {
-            const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
-            oldControls.load("items");
-            await context.sync();
-
-            let isDeleted = false;
-
-            if (oldControls.items.length === 0) {
-              // Đã xóa luôn cả lớp vỏ (bôi đen toàn bộ rồi xóa)
-              isDeleted = true;
-            } else {
-              // Ảnh bị xóa nhưng vỏ vẫn còn (Placeholder "Click or tap here...")
-              // Tình huống B: Lớp vỏ vẫn còn, cần kiểm tra xem bên trong là công thức hay Placeholder
-              const cc = oldControls.items[0];
-              const ccRange = cc.getRange();
-
-              // BỎ oMaths. Chỉ yêu cầu Word load danh sách ảnh và toàn bộ chữ bên trong
-              const pics = ccRange.inlinePictures;
-              pics.load("items");
-              ccRange.load("text");
-
-              await context.sync();
-
-              // Loại bỏ toàn bộ khoảng trắng và ký tự ẩn để so sánh cho chuẩn
-              const cleanText = ccRange.text.replace(/[\r\n\t\u200B-\u200D\uFEFF\uFFFC ]/g, '');
-
-              // Nhận diện dòng chữ Placeholder mặc định của Word 
-              // (Hỗ trợ cả Office Tiếng Anh "Click or tap..." và Tiếng Việt "...văn bản")
-              const isPlaceholder = cleanText.includes("Click or tap") || cleanText.toLowerCase().includes("văn bản");
-
-              // Nếu KHÔNG có ảnh nào VÀ ruột chỉ chứa dòng chữ Placeholder (hoặc trống rỗng)
-              // -> Chắc chắn công thức đã bị xóa, tiêu hủy lớp vỏ ngay!
-              if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
-                isDeleted = true;
-                cc.delete(false);
-                await context.sync();
-              }
-            }
-
-            // Tiến hành dọn dẹp Add-in nếu phát hiện xóa
-            if (isDeleted) {
-              if (mathfieldRef.current) {
-                mathfieldRef.current.value = ""; // Xóa màn hình Math Field
-              }
-              setCurrentLatex("");
-
-              // Xóa mã LaTeX trong bộ nhớ ngầm của Word
-              Office.context.document.settings.remove(lastEqIdRef.current);
-              Office.context.document.settings.saveAsync();
-            }
-            lastEqIdRef.current = ""; // Reset bộ nhớ tạm
-          }
+          // Nếu click ra ngoài văn bản thường, reset ID
+          lastEqIdRef.current = "";
         }
       });
     } catch (error) {
-      // Bỏ qua lỗi ngầm để trải nghiệm mượt mà
+      // Bỏ qua lỗi ngầm
     }
   }, []);
 
@@ -412,9 +383,7 @@ export default function App() {
           newCc.appearance = Word.ContentControlAppearance.hidden;
         }
         await context.sync();
-
         
-
       });
     } catch (error) {
       console.error("Lỗi chèn vào Word:", error);
