@@ -923,6 +923,8 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 <PivotItem headerText="Annotation"
                     onRenderItemLink={() => renderLatexTab("\\overbrace{#?}^{\\text{note}}")}>
                     <OverflowMathGroup>
+                        <MathBtn displayLatex="\text{txt}" insertLatex="\text{#0}" title="\text{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\textrm{txt}" insertLatex="\textrm{#0}" title="\textrm{}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cancel{2}" insertLatex="\cancel{#0}" title="\cancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\bcancel{2}" insertLatex="\bcancel{#0}" title="\bcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\xcancel{ABC}" insertLatex="\xcancel{ABC}" title="\xcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -930,6 +932,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\underbrace{a+b+c}_{\text{note}}" insertLatex="\underbrace{a+b+c}_{\text{#0}}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\boxed{AB}" insertLatex="\boxed{#0}" title="\boxed" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\phase{60^\circ}" insertLatex="\phase{#0}" title="\phase{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\enclose{roundedbox updiagonalstrike}{x=0}" insertLatex="\enclose{roundedbox updiagonalstrike}{#0}" title="\enclose{roundedbox updiagonalstrike}{}" onInsert={onInsert} borderColor={PaletteColors.office} />
                     </OverflowMathGroup>
                 </PivotItem>
 

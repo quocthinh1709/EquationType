@@ -9,4 +9,7 @@ export const unsupportedMathMlCommands = [
   "\\overrightarrow{",
   "\\phase{",
   "\\overparen{",
+  "\\overleftarrow{",
+  "\\overleftrightarrow{",
+  "\\ce{",
 ];

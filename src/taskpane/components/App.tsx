@@ -154,10 +154,11 @@ export default function App() {
             await context.sync();
 
             // Loại bỏ khoảng trắng và ký tự ẩn để so sánh
-            const cleanText = oldRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-            const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+            //const cleanText = oldRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            //const isPlaceholder = cleanText.includes("click or tap") || cleanText.includes("vănbản");
 
-            if (oldPics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+            //if (oldPics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+            if (oldPics.items.length === 0) {
               isOldDeleted = true;
               oldCC.delete(false); // Tiêu hủy vỏ rác cũ
               await context.sync();
@@ -188,11 +189,12 @@ export default function App() {
           ccRange.load("text");
           await context.sync();
 
-          const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-          const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+          //const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+          //const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
           
           // Đề phòng trường hợp click trúng cái vỏ rác chưa kịp xóa
-          if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+          //if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+          if (pics.items.length === 0) {
             if (mathfieldRef.current) mathfieldRef.current.value = "";
             setCurrentLatex("");
             lastEqIdRef.current = "";
@@ -305,6 +307,7 @@ export default function App() {
             });
 
             insertContent = window.btoa(utf8Encoded);
+           
             isInsertingImage = true;
 
             //URL.revokeObjectURL(url);
@@ -407,6 +410,7 @@ export default function App() {
 
       containerRef.current.appendChild(mf);
       mathfieldRef.current = mf;
+      
       // ==========================================
       // NHÚNG CÁC TẬP TIN CẤU HÌNH BÊN NGOÀI VÀO MATHLIVE
       // ==========================================

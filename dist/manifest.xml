@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="TaskPaneApp">
-  <Id>16686396-5ad6-45d0-b4e1-f5f04d2daa95</Id>
+  <Id>16686396-5ad6-45d0-b4e1-f5f04d2daa94</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>LSTS</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="E-Editor"/>
   <Description DefaultValue="Công cụ hỗ trợ soạn thảo công thức."/>
-  <IconUrl DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/icon-128.png"/>
-  <HighResolutionIconUrl DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/icon-128.png"/>
+  <IconUrl DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/logo-128.png"/>
+  <HighResolutionIconUrl DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/logo-128.png"/>
   <SupportUrl DefaultValue="https://www.contoso.com/help"/>
   <AppDomains>
     <AppDomain>https://www.contoso.com</AppDomain>
@@ -62,9 +62,9 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/logo-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/logo-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://utility.lsts.edu.vn/math-addin/assets/logo-80.png"/>
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=276812"/>
