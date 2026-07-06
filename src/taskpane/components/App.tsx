@@ -1,8 +1,6 @@
 import * as React from "react";
 import { useEffect, useRef, useState, useCallback } from "react";
-//import { DefaultButton, Stack, Label } from "@fluentui/react";
 import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, MessageBar, MessageBarType } from "@fluentui/react";
-//import { DefaultButton, IconButton, Stack, Label, ChoiceGroup, IChoiceGroupOption, Toggle, Dialog, DialogType, DialogFooter, PrimaryButton, TextField } from "@fluentui/react";
 import { Dialog, DialogType, DialogFooter, PrimaryButton, TextField, Panel, PanelType, SearchBox, ThemeProvider, createTheme } from "@fluentui/react";
 import { initializeIcons } from '@fluentui/react/lib/Icons';
 
@@ -32,8 +30,6 @@ const officeGreenTheme = createTheme({
 // Đảm bảo load Font nội bộ chuẩn xác
 MathfieldElement.fontsDirectory = "./fonts";
 
-
-
 export default function App() {
   // BƯỚC 1: KIỂM TRA MÔI TRƯỜNG LÀ WORD ONLINE
   const isOnline = Office.context.platform === Office.PlatformType.OfficeOnline;
@@ -46,9 +42,7 @@ export default function App() {
   // THÊM BIẾN TRẠNG THÁI LƯU CHẾ ĐỘ CHÈN
   const [insertMode, setInsertMode] = useState<string>("mathml");
 
-
   // --- STATE TỪ ĐIỂN ---
-  // Khởi tạo từ điển từ localStorage (nếu có)
   const [userDict, setUserDict] = useState<{ inline: Record<string, string>, macro: Record<string, string> }>(() => {
     try {
       const saved = localStorage.getItem("math_user_dict");
@@ -58,42 +52,33 @@ export default function App() {
     }
   });
 
-  // Quản lý hiển thị Popup Thêm từ điển
   const [isAddDictOpen, setIsAddDictOpen] = useState(false);
   const [dictKey, setDictKey] = useState("");
   const [dictType, setDictType] = useState<"inline" | "macro">("inline");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // ---------------------
-  // Định nghĩa cấu trúc của 1 item khi đang sửa
+
   interface EditItem { id: string; type: "inline" | "macro"; key: string; value: string; }
-  // Quản lý hiển thị Panel sửa từ điển
-  // State quản lý danh sách sửa
   const [isEditDictOpen, setIsEditDictOpen] = useState(false);
   const [editItems, setEditItems] = useState<EditItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Kiểm tra xem currentLatex có chứa bất kỳ chuỗi nào trong danh sách cấm hay không
   const isUnsupported = unsupportedMathMlCommands.some(cmd => currentLatex.includes(cmd));
-  // Tự động gạt công tắc sang "Ảnh" nếu phát hiện lệnh cấm
+  
   useEffect(() => {
     if (isUnsupported && insertMode === "mathml") {
       setInsertMode("svg");
     }
   }, [isUnsupported, insertMode]);
 
-
-  // ==========================================
-  // BỘ LỌC TỰ ĐỘNG: Biến mọi chuỗi Macro tĩnh thành Macro Động (Có gợi ý + Cho phép Sửa)
-  // ==========================================
   const upgradeMacros = (macroDict: Record<string, any>) => {
     const upgraded: Record<string, any> = {};
     Object.keys(macroDict).forEach(key => {
       const val = macroDict[key];
       if (typeof val === "string") {
         upgraded[key] = {
-          def: val,                 // Lấy mã LaTeX gốc
-          captureSelection: false,  // Mở khóa click chuột
-          expand: true              // Ép bung mã, tự động nhận diện #0 và #?
+          def: val,
+          captureSelection: false,
+          expand: true
         };
       } else {
         upgraded[key] = val;
@@ -103,7 +88,7 @@ export default function App() {
   };
 
   // ==========================================
-  // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN VÀ DỌN RÁC
+  // HÀM 1: ĐỌC NGƯỢC TỪ WORD VÀO ADD-IN VÀ DỌN RÁC (ĐÃ PHÂN BIỆT SVG / MML)
   // ==========================================
   const handleReadEquation = useCallback(async () => {
     try {
@@ -118,25 +103,28 @@ export default function App() {
 
         await context.sync();
 
-        let newEqId = "";
+        let newFullTag = "";
         let newTargetCC: Word.ContentControl | null = null;
 
-        // Ưu tiên đọc khi bôi đen
         if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
-          newEqId = ccs.items[0].tag;
+          newFullTag = ccs.items[0].tag;
           newTargetCC = ccs.items[0];
-        }
-        // Sau đó đọc khi click chuột
-        else if (!cc.isNullObject && cc.title === "LSTS_Math") {
-          newEqId = cc.tag;
+        } else if (!cc.isNullObject && cc.title === "LSTS_Math") {
+          newFullTag = cc.tag;
           newTargetCC = cc;
         }
+
+        // Tách ID bộ nhớ và Loại hình ảnh (SVG / MML)
+        const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
+        const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
 
         // ========================================================
         // BƯỚC 1: KIỂM TRA VÀ DỌN DẸP VỎ RÁC CỦA CÔNG THỨC CŨ
         // ========================================================
-        // Nếu trước đó có chọn 1 công thức, và bây giờ vừa click sang chỗ khác
-        if (lastEqIdRef.current && lastEqIdRef.current !== newEqId) {
+        if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
+          const oldEqId = lastEqIdRef.current.split("|")[0];
+          const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
+
           const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
           oldControls.load("items");
           await context.sync();
@@ -153,24 +141,33 @@ export default function App() {
             oldRange.load("text");
             await context.sync();
 
-            // Loại bỏ khoảng trắng và ký tự ẩn để so sánh
-            //const cleanText = oldRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-            //const isPlaceholder = cleanText.includes("click or tap") || cleanText.includes("vănbản");
+            const rawText = oldRange.text;
+            //const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            //const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
 
-            //if (oldPics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
-            if (oldPics.items.length === 0) {
-              isOldDeleted = true;
-              oldCC.delete(false); // Tiêu hủy vỏ rác cũ
+            // Xử lý dọn rác phân biệt theo loại
+            if (oldEqType === "SVG") {
+              //if (oldPics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
+              if (oldPics.items.length === 0 ) {
+                isOldDeleted = true;
+              }
+            } else { // Xử lý MML
+              //if (isPlaceholder || rawText === "") {
+              if (rawText === "") {
+                isOldDeleted = true;
+              }
+            }
+
+            if (isOldDeleted) {
+              oldCC.delete(false);
               await context.sync();
             }
           }
 
-          // Dọn dẹp bộ nhớ ngầm
           if (isOldDeleted) {
-            Office.context.document.settings.remove(lastEqIdRef.current);
+            Office.context.document.settings.remove(oldEqId);
             Office.context.document.settings.saveAsync();
-            // Nếu click ra chỗ trống (không phải công thức mới), thì xóa luôn Math Field
-            if (!newEqId) {
+            if (!newFullTag) {
               if (mathfieldRef.current) mathfieldRef.current.value = "";
               setCurrentLatex("");
             }
@@ -180,8 +177,8 @@ export default function App() {
         // ========================================================
         // BƯỚC 2: XỬ LÝ CÔNG THỨC MỚI ĐƯỢC CHỌN (NẾU CÓ)
         // ========================================================
-        if (newEqId && newTargetCC) {
-          lastEqIdRef.current = newEqId; // Cập nhật ID mới
+        if (newFullTag && newTargetCC) {
+          lastEqIdRef.current = newFullTag; 
 
           const ccRange = newTargetCC.getRange();
           const pics = ccRange.inlinePictures;
@@ -189,22 +186,27 @@ export default function App() {
           ccRange.load("text");
           await context.sync();
 
-          //const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-          //const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+          const rawText = ccRange.text;
+          const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+          const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
           
-          // Đề phòng trường hợp click trúng cái vỏ rác chưa kịp xóa
-          //if (pics.items.length === 0 && (cleanText === "" || isPlaceholder)) {
-          if (pics.items.length === 0) {
+          let isEmptied = false;
+          if (newEqType === "SVG") {
+            isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
+          } else {
+            isEmptied = isPlaceholder || rawText === "";
+          }
+
+          if (isEmptied) {
             if (mathfieldRef.current) mathfieldRef.current.value = "";
             setCurrentLatex("");
             lastEqIdRef.current = "";
 
-            newTargetCC.delete(false); // Tiêu hủy
+            newTargetCC.delete(false); 
             Office.context.document.settings.remove(newEqId);
             Office.context.document.settings.saveAsync();
             await context.sync();
           } else {
-            // Đọc mã Code lên Math Field
             const latexCode = Office.context.document.settings.get(newEqId);
             if (latexCode && mathfieldRef.current) {
               if (mathfieldRef.current.value !== latexCode) {
@@ -214,7 +216,6 @@ export default function App() {
             }
           }
         } else {
-          // Nếu click ra ngoài văn bản thường, reset ID
           lastEqIdRef.current = "";
         }
       });
@@ -224,7 +225,7 @@ export default function App() {
   }, []);
 
   // ==========================================
-  // HÀM 2: CHÈN HOẶC GHI ĐÈ CÔNG THỨC VÀO WORD
+  // HÀM 2: CHÈN HOẶC GHI ĐÈ CÔNG THỨC VÀO WORD (GẮN THÊM TAG PHÂN LOẠI)
   // ==========================================
   const handleInsertEquation = async () => {
     if (!mathfieldRef.current) return;
@@ -237,11 +238,9 @@ export default function App() {
 
     let mathWidthEx = 0;
     let mathHeightEx = 0;
-    let verticalAlignEx = 0; // 
+    let verticalAlignEx = 0; 
 
     if (insertMode === "mathml") {
-      // ... (Phần MathML
-
       const hiddenDiv = document.createElement("div");
       hiddenDiv.style.display = "none";
       document.body.appendChild(hiddenDiv);
@@ -251,9 +250,7 @@ export default function App() {
       const mathML = tempMf.getValue("math-ml" as any);
       document.body.removeChild(hiddenDiv);
       insertContent = mathML.includes("<math") ? mathML : `<math xmlns="http://www.w3.org/1998/Math/MathML">${mathML}</math>`;
-
     } else {
-      // [B] CHỌN SVG CẢI TIẾN
       try {
         const mathJaxObj = (window as any).MathJax;
         if (mathJaxObj && mathJaxObj.tex2svg) {
@@ -261,56 +258,34 @@ export default function App() {
           const svgElement = svgNode.querySelector("svg");
 
           if (svgElement) {
-
             const FONT_SIZE_PT = 12;
-            const EX_TO_PT = FONT_SIZE_PT * 0.5; // 1ex = 6pt
-            const PT_TO_EMU = 12700; // 1pt = 12700 EMU
+            const EX_TO_PT = FONT_SIZE_PT * 0.5;
 
             mathWidthEx = parseFloat(svgElement.getAttribute("width") || "0");
             mathHeightEx = parseFloat(svgElement.getAttribute("height") || "0");
 
             const widthPt = mathWidthEx * EX_TO_PT;
             const heightPt = mathHeightEx * EX_TO_PT;
-            // Render canvas ở kích thước cố định, độc lập với devicePixelRatio
-            const RENDER_SCALE = 4; // chất lượng cao
-            const PX_PER_PT = 96 / 72; // screen dpi / point dpi
 
-            // MathJax thường trả về dạng: style="vertical-align: -0.25ex;"
             const styleStr = svgElement.getAttribute("style") || "";
             const vaMatch = styleStr.match(/vertical-align:\s*([-0-9.]+)ex/);
             if (vaMatch && vaMatch[1]) {
               verticalAlignEx = parseFloat(vaMatch[1]);
             }
 
-            /*
-            const canvas = document.createElement("canvas");
-            canvas.width = Math.ceil(widthPt * PX_PER_PT * RENDER_SCALE);
-            canvas.height = Math.ceil(heightPt * PX_PER_PT * RENDER_SCALE);
-            svgElement.setAttribute("width", canvas.width + "px");
-            svgElement.setAttribute("height", canvas.height + "px");
-            svgElement.setAttribute("xmlns","http://www.w3.org/2000/svg");
-            svgElement.setAttribute("shape-rendering","geometricPrecision");
-            */
-
-            // Xóa bỏ hoàn toàn Canvas và Math.ceil!
-            // Gán trực tiếp giá trị point (pt) với đầy đủ phần thập phân để giữ nguyên tỉ lệ vàng
             svgElement.setAttribute("width", widthPt + "pt");
             svgElement.setAttribute("height", heightPt + "pt");
             svgElement.setAttribute("xmlns", "http://www.w3.org/2000/svg");
             svgElement.setAttribute("shape-rendering", "geometricPrecision");
 
             let svgData = new XMLSerializer().serializeToString(svgElement);
-
             svgData = svgData.replace(/currentColor/gi, "#000000");
             const utf8Encoded = encodeURIComponent(svgData).replace(/%([0-9A-F]{2})/g, (_match, p1) => {
               return String.fromCharCode(parseInt(p1, 16));
             });
 
             insertContent = window.btoa(utf8Encoded);
-           
             isInsertingImage = true;
-
-            //URL.revokeObjectURL(url);
           }
         }
       } catch (error) {
@@ -318,33 +293,21 @@ export default function App() {
       }
     }
 
-    // [C] GIAO TIẾP WORD (Đã fix thứ tự Sync)
     try {
       const eqId = "LSTS_" + new Date().getTime() + "_" + Math.random().toString(36).substring(2, 6);
-      //Office.context.document.settings.set(eqId, latexOriginal);
       Office.context.document.settings.set(eqId, latexExpanded);
       await Office.context.document.settings.saveAsync();
 
       await Word.run(async (context) => {
         const range = context.document.getSelection();
-        // ---> THÊM BƯỚC ĐỌC FONT CHỮ CỦA WORD <---
         range.load("font/size");
         await context.sync();
 
-        // Lấy cỡ chữ hiện tại, nếu người dùng đang bôi đen nhiều cỡ chữ khác nhau thì mặc định lấy 12
         const currentFontSize = range.font.size || 12;
 
         if (isInsertingImage) {
           if (!insertContent) return;
-
-          // 1. Chèn ảnh
           const picture = range.insertInlinePictureFromBase64(insertContent, Word.InsertLocation.replace);
-
-          // 2. PHẢI SYNC TRƯỚC KHI ĐẶT THUỘC TÍNH
-          //await context.sync();
-
-          // 3. ĐIỀU CHỈNH KÍCH THƯỚC KHỚP VỚI FONT CHỮ
-          // Hệ số chuyển đổi từ "ex" sang "points" của Word
           const exToPt = currentFontSize * 0.44;
 
           if (mathWidthEx > 0 && mathHeightEx > 0) {
@@ -353,45 +316,31 @@ export default function App() {
           }
           picture.lockAspectRatio = true;
 
-          // SYNC ĐỂ LƯU KÍCH THƯỚC TRƯỚC KHI XỬ LÝ VỊ TRÍ (Tùy chọn an toàn)
-          //await context.sync();
-
-          // 3. ĐIỀU CHỈNH ĐỘ CAO/THẤP CỦA ẢNH (BASELINE ALIGNMENT)
           const picRange = picture.getRange();
           if (verticalAlignEx !== 0) {
-
-            //picRange.font.position = verticalAlignEx * exToPt;  
-
-            //const basePosition = verticalAlignEx * exToPt;
-            //const dynamicOffset = currentFontSize * 0.08;
-            //picRange.font.position = basePosition - dynamicOffset;
             picRange.font.position = verticalAlignEx * exToPt;
-
           } else {
             picRange.font.position = 0;
           }
 
-          // 4. Bọc Content Control
-          //const picRange = picture.getRange();
           const newCc = picRange.insertContentControl();
           newCc.title = "LSTS_Math";
-          newCc.tag = eqId;
+          newCc.tag = eqId + "|SVG"; // Gắn thẻ đánh dấu đây là ảnh SVG
           newCc.appearance = Word.ContentControlAppearance.hidden;
         } else {
-          // ... (Phần MathML giữ nguyên)
           const insertedRange = range.insertHtml(insertContent, Word.InsertLocation.replace);
           const newCc = insertedRange.insertContentControl();
           newCc.title = "LSTS_Math";
-          newCc.tag = eqId;
+          newCc.tag = eqId + "|MML"; // Gắn thẻ đánh dấu đây là mã MathML
           newCc.appearance = Word.ContentControlAppearance.hidden;
         }
         await context.sync();
-        
       });
     } catch (error) {
       console.error("Lỗi chèn vào Word:", error);
     }
   }
+
   // ==========================================
   // KHỞI TẠO VÀ "NGHE NGÓNG" THAO TÁC CỦA NGƯỜI DÙNG
   // ==========================================
@@ -410,35 +359,24 @@ export default function App() {
 
       containerRef.current.appendChild(mf);
       mathfieldRef.current = mf;
-      
-      // ==========================================
-      // NHÚNG CÁC TẬP TIN CẤU HÌNH BÊN NGOÀI VÀO MATHLIVE
-      // ==========================================
+
       mf.inlineShortcuts = {
-        ...mf.inlineShortcuts,      // Giữ lại phím tắt gốc của thư viện
-        ...customInlineShortcuts,    // Đổ toàn bộ phím tắt tự chế từ file mathShortcuts.ts vào đây
+        ...mf.inlineShortcuts,      
+        ...customInlineShortcuts,    
         ...userDict.inline
       };
 
       mf.macros = {
-        ...mf.macros,               // Giữ lại macro gốc
-        //...customMacros,             // Đổ toàn bộ macro tự chế vào đây  
-        //...userDict.macro
+        ...mf.macros,               
         ...upgradeMacros(customMacros),
         ...upgradeMacros(userDict.macro)
       };
 
-
-      // Khi gõ trên hình thì code LaTeX chạy theo
       mf.addEventListener("input", () => {
-        //setCurrentLatex(mf.value);
         setCurrentLatex(mf.getValue("latex-expanded"));
       });
-
-
     }
 
-    // Lắng nghe khi bôi đen hay click chuột trong Word, gọi hàm Đọc ngược!
     const selectionHandler = async () => {
       await handleReadEquation();
     };
@@ -460,41 +398,31 @@ export default function App() {
     if (mathfieldRef.current) {
       mathfieldRef.current.insert(latexCode);
       mathfieldRef.current.focus();
-
     }
   };
 
-
-  // Hàm Lưu phím tắt mới vào bộ nhớ
   const handleSaveToDict = () => {
     if (!dictKey.trim()) {
       alert("Vui lòng nhập phím tắt!");
       return;
     }
-
-    // Cập nhật State
     const updatedDict = { ...userDict };
-    updatedDict[dictType][dictKey.trim()] = currentLatex; // Lấy mã LaTeX hiện tại trên màn hình
+    updatedDict[dictType][dictKey.trim()] = currentLatex; 
     setUserDict(updatedDict);
-
-    // Lưu vào LocalStorage
     localStorage.setItem("math_user_dict", JSON.stringify(updatedDict));
 
-    // Cập nhật nóng vào MathLive đang hiển thị
     if (mathfieldRef.current) {
       if (dictType === "inline") {
         mathfieldRef.current.inlineShortcuts = { ...mathfieldRef.current.inlineShortcuts, ...updatedDict.inline };
       } else {
-        //mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...updatedDict.macro }; //Không có con trỏ
         mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...upgradeMacros(updatedDict.macro) };
       }
     }
 
     setIsAddDictOpen(false);
-    setDictKey(""); // reset
+    setDictKey(""); 
   };
 
-  // Hàm Xuất File JSON
   const handleExportDict = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userDict, null, 2));
     const downloadNode = document.createElement('a');
@@ -505,7 +433,6 @@ export default function App() {
     downloadNode.remove();
   };
 
-  // Hàm Nhập File JSON (Gộp và bảo vệ dữ liệu cũ)
   const handleImportDict = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -514,29 +441,18 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const importedData = JSON.parse(e.target?.result as string);
-
-        // Kiểm tra cấu trúc file import
         if (importedData.inline && importedData.macro) {
-
-          // --- LOGIC GỘP AN TOÀN ---
-          // Đặt importedData lên trước, userDict lên sau.
-          // Nếu có phím tắt trùng tên, công thức cũ của người dùng sẽ được ưu tiên giữ nguyên!
           const mergedDict = {
             inline: { ...importedData.inline, ...userDict.inline },
             macro: { ...importedData.macro, ...userDict.macro }
           };
-
-          // Lưu State và LocalStorage
           setUserDict(mergedDict);
           localStorage.setItem("math_user_dict", JSON.stringify(mergedDict));
 
-          // Cập nhật nóng vào giao diện MathLive đang mở
           if (mathfieldRef.current) {
             mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...mergedDict.inline };
-            //mathfieldRef.current.macros = { ...customMacros, ...mergedDict.macro };
             mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(mergedDict.macro) };
           }
-
           alert("Nhập từ điển thành công! Các phím tắt cũ của bạn vẫn được giữ nguyên an toàn.");
         } else {
           alert("Cấu trúc file JSON không đúng chuẩn từ điển (Thiếu inline hoặc macro)!");
@@ -546,10 +462,9 @@ export default function App() {
       }
     };
     reader.readAsText(file);
-    event.target.value = ""; // Reset input để có thể import lại chính file đó nếu cần
+    event.target.value = ""; 
   };
 
-  // Mở giao diện: Chuyển Từ điển (Object) thành Danh sách (Array) để dễ bề chỉnh sửa
   const handleOpenEditDict = () => {
     const items: EditItem[] = [];
     Object.entries(userDict.inline).forEach(([k, v]) =>
@@ -564,25 +479,22 @@ export default function App() {
     setIsEditDictOpen(true);
   };
 
-  // Hàm cập nhật (Chấp cả sửa Key lẫn Value)
   const handleItemChange = (id: string, field: "key" | "value", newValue: string) => {
     setEditItems(prev => prev.map(item =>
       item.id === id ? { ...item, [field]: newValue } : item
     ));
   };
 
-  // Hàm xóa
   const handleItemDelete = (id: string) => {
     setEditItems(prev => prev.filter(item => item.id !== id));
   };
 
-  // Lưu lại: Chuyển ngược từ Danh sách (Array) về lại Từ điển (Object)
   const handleSaveEditedDict = () => {
     const newDict = { inline: {} as Record<string, string>, macro: {} as Record<string, string> };
 
     editItems.forEach(item => {
       const k = item.key.trim();
-      if (k) { // Bỏ qua nếu người dùng vô tình xóa trắng ô Key
+      if (k) { 
         newDict[item.type][k] = item.value;
       }
     });
@@ -592,7 +504,6 @@ export default function App() {
 
     if (mathfieldRef.current) {
       mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...newDict.inline };
-      //mathfieldRef.current.macros = { ...customMacros, ...newDict.macro };
       mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(newDict.macro) };
     }
     setIsEditDictOpen(false);
@@ -602,12 +513,6 @@ export default function App() {
     <ThemeProvider theme={officeGreenTheme}>
       <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8" }}>
         <Stack tokens={{ childrenGap: 12 }}>
-          {/*
-        <Label style={{ fontSize: "18px", fontWeight: "bold", color: "#107c41" }}>
-          {title} - Công cụ Toán học
-        </Label>
-        */}
-          {/* HIỂN THỊ CẢNH BÁO NẾU LÀ WORD ONLINE */}
           {isOnline && (
             <MessageBar
               messageBarType={MessageBarType.blocked}
@@ -621,25 +526,18 @@ export default function App() {
             <MathPalette onInsert={insertSymbol} />
           </div>
 
-          <Label style={{ fontSize: "14px", fontWeight: "600" }}>Soạn thảo công thức:</Label>
+          <Label style={{ fontSize: "14px", fontWeight: "600" }}>Math Live:</Label>
           <div ref={containerRef} id="mathfield-container" />
 
-          {/* Ô CODE ĐỒNG BỘ 2 CHIỀU */}
           <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
-            {/*
-          <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
-            */}
             <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "4px" }}>
               <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
 
               <Stack horizontal tokens={{ childrenGap: 6 }} verticalAlign="center">
-                {/* Input ẩn */}
                 <input type="file" accept=".json" ref={fileInputRef} style={{ display: "none" }} onChange={handleImportDict} />
 
-                {/* Nút Nhập / Xuất (Có Icon, bo góc) */}
                 <DefaultButton
                   iconProps={{ iconName: 'Upload' }}
-                  //text="Import"
                   title="Import Dictionary"
                   onClick={() => fileInputRef.current?.click()}
                   styles={{
@@ -649,7 +547,6 @@ export default function App() {
                 />
                 <DefaultButton
                   iconProps={{ iconName: 'Download' }}
-                  //text="Export"
                   title="Export Dictionary"
                   onClick={handleExportDict}
                   styles={{
@@ -658,10 +555,8 @@ export default function App() {
                   }}
                 />
 
-                {/* THÊM NÚT SỬA VÀO ĐÂY */}
                 <DefaultButton
                   iconProps={{ iconName: 'Edit' }}
-                  //text="Edit"
                   title="Edit Dictionary"
                   onClick={handleOpenEditDict}
                   styles={{
@@ -670,7 +565,6 @@ export default function App() {
                   }}
                 />
 
-                {/* Nút Lưu Từ điển (Thêm Icon Save, bo góc, màu xanh lá đồng bộ) */}
                 <DefaultButton
                   iconProps={{ iconName: 'Save' }}
                   text="Save to Dict"
@@ -703,12 +597,10 @@ export default function App() {
           <Stack
             horizontal
             horizontalAlign="space-between"
-            verticalAlign="center" // Căn giữa nút chèn theo chiều cao của cụm bên trái
+            verticalAlign="center" 
             tokens={{ childrenGap: 16 }}
             style={{ marginTop: "12px", marginBottom: "10px" }}
           >
-            {/* NÚT CHỌN ĐỊNH DẠNG CHÈN */}
-
             <Stack tokens={{ childrenGap: 4 }} style={{ flexGrow: 1 }}>
               <Toggle
                 label="Mode:"
@@ -717,20 +609,17 @@ export default function App() {
                 offText="Office"
                 checked={insertMode === "svg"}
                 onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
-                disabled={isUnsupported} // Khóa luôn nút gạt nếu phát hiện lệnh không hỗ trợ
+                disabled={isUnsupported} 
                 styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }}
               />
 
-              {/* HIỂN THỊ CẢNH BÁO MÀU ĐỎ NẾU CHỨA LỆNH KHÔNG HỖ TRỢ */}
               {isUnsupported && (
                 <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
                   ⚠️ Office Math is not supported. Insert E-Editor type only.
                 </Label>
               )}
-
             </Stack>
 
-            {/* NÚT CHÈN */}
             <DefaultButton
               primary
               text="Insert/Update"
@@ -738,10 +627,8 @@ export default function App() {
               style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
               title="Insert new equation or update selected equation"
             />
-
           </Stack>
 
-          {/* DIALOG NHẬP TÊN TỪ ĐIỂN (Nằm ngầm, chỉ hiện khi bấm "+ Lưu vào từ điển") */}
           <Dialog
             hidden={!isAddDictOpen}
             onDismiss={() => setIsAddDictOpen(false)}
@@ -766,8 +653,8 @@ export default function App() {
               onChange={(_, val) => setDictKey(val || "")}
               styles={{
                 root: { marginTop: 10 },
-                fieldGroup: { height: 40 }, // Tăng chiều cao của khung viền lên 40px
-                field: { fontSize: "15px", padding: "8px" } // Tăng nhẹ cỡ chữ để cân đối với chiều cao mới
+                fieldGroup: { height: 40 }, 
+                field: { fontSize: "15px", padding: "8px" } 
               }}
             />
             <DialogFooter>
@@ -776,7 +663,6 @@ export default function App() {
             </DialogFooter>
           </Dialog>
 
-          {/* PANEL QUẢN LÝ VÀ TÌM KIẾM TỪ ĐIỂN */}
           <Panel
             isOpen={isEditDictOpen}
             onDismiss={() => setIsEditDictOpen(false)}
@@ -793,7 +679,6 @@ export default function App() {
 
             <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px", overflowX: "hidden" }}>
               {["inline", "macro"].map((type) => {
-                // 1. Lọc danh sách theo loại và từ khóa
                 const filteredItems = editItems.filter(item =>
                   item.type === type &&
                   (item.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -802,7 +687,6 @@ export default function App() {
 
                 if (filteredItems.length === 0) return null;
 
-                // 2. CẮT LẤY TỐI ĐA 10 ITEM ĐỂ TỐI ƯU HIỆU SUẤT
                 const displayItems = filteredItems.slice(0, 10);
 
                 return (
@@ -838,7 +722,6 @@ export default function App() {
                       </Stack>
                     ))}
 
-                    {/* 3. HIỂN THỊ THÔNG BÁO NẾU CÓ NHIỀU HƠN 10 KẾT QUẢ */}
                     {filteredItems.length > 10 && (
                       <Label style={{ fontStyle: "italic", color: "#d13438", fontSize: "12px", marginTop: "4px" }}>
                         * Đang hiển thị 10 / {filteredItems.length} kết quả. Hãy nhập thêm từ khóa để tìm chính xác hơn.

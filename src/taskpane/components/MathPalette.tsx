@@ -76,17 +76,14 @@ const VerticalDivider = () => {
 };
 
 // ==========================================
-// THÊM MỚI: BỘ GOM NÚT TỰ ĐỘNG (ĐỘNG THEO CHIỀU RỘNG 2 HÀNG)
-// ==========================================
-// ==========================================
 // THÊM MỚI: BỘ GOM NÚT TỰ ĐỘNG BẰNG CÁCH ĐO TỌA ĐỘ THỰC TẾ
 // ==========================================
 const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
     const [isCalloutVisible, setIsCalloutVisible] = useState(false);
-    
+
     // maxVisible = null nghĩa là đang trong trạng thái "Đo lường"
     const [maxVisible, setMaxVisible] = useState<number | null>(null);
-    
+
     const containerRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLDivElement>(null);
 
@@ -99,7 +96,7 @@ const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
 
         const calculateCapacity = () => {
             if (!containerRef.current) return;
-            
+
             // Lấy thẻ div chứa toàn bộ các nút
             const flexContainer = containerRef.current.firstElementChild as HTMLElement;
             if (!flexContainer) return;
@@ -116,7 +113,7 @@ const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
             // Quét qua từng nút để xem nó nằm ở hàng thứ mấy
             for (let i = 0; i < items.length; i++) {
                 const item = items[i];
-                
+
                 // Nếu tọa độ Y của nút này lớn hơn nút trước đó 20px -> Nó đã rớt xuống hàng mới
                 if (item.offsetTop > lastItemTop + 20) {
                     currentRow++;
@@ -158,25 +155,25 @@ const OverflowMathGroup = ({ children }: { children: React.ReactNode }) => {
 
     // === PHẦN RENDER GIAO DIỆN ===
     const isMeasuring = maxVisible === null;
-    
+
     // Khi đang đo: Render TẤT CẢ nút. Khi đo xong: Chỉ render số nút vừa vặn 2 hàng
     const visibleChildren = isMeasuring ? childrenArray : childrenArray.slice(0, maxVisible);
     const hiddenChildren = isMeasuring ? [] : childrenArray.slice(maxVisible);
 
     return (
-        <div 
-            ref={containerRef} 
-            style={{ 
-                width: "100%", 
+        <div
+            ref={containerRef}
+            style={{
+                width: "100%",
                 // TRICK: Khi đang đo, ép chiều cao khung tối đa 95px và giấu đi phần tràn. 
                 // Nhờ vậy, người dùng sẽ không thấy giao diện bị chớp giật hay lòi ra hàng 3!
-                maxHeight: isMeasuring ? "95px" : "auto", 
-                overflow: isMeasuring ? "hidden" : "visible" 
+                maxHeight: isMeasuring ? "95px" : "auto",
+                overflow: isMeasuring ? "hidden" : "visible"
             }}
         >
             {/* Sử dụng thẻ div flex thuần thay vì Stack để đo tọa độ chính xác tuyệt đối */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "2px", marginTop: "5px" }}>
-                
+
                 {/* 1. Các nút hiển thị chính */}
                 {visibleChildren}
 
@@ -244,7 +241,7 @@ const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => 
 // =========================================================================
 // LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã làm tổng quát)
 // =========================================================================
-const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number, cols: number) => {
+const generateSystemLatex = (type: "cases" | "array" | "matrix" | "piecewise", rows: number, cols: number) => {
     let latex = "";
 
     if (type === "cases") {
@@ -268,6 +265,17 @@ const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number
         }
         latex += "\n\\end{array} \\right.";
 
+    } else if (type === "matrix") {
+        // Hệ hoặc (Ngoặc vuông bên trái)
+
+        latex += `\\left[ \\begin{matrix}\n`;
+        for (let r = 0; r < rows; r++) {
+            let rowContent = Array(cols).fill("#?");
+            latex += rowContent.join(" & ");
+            if (r < rows - 1) latex += " \\\\\n";
+        }
+        latex += "\n\\end{matrix} \\right.";
+
     } else if (type === "piecewise") {
         // Hàm số phân nhánh f(x) = { (Thuần túy, không có chữ "nếu")
         latex += "f(x) = \\begin{cases}\n";
@@ -287,7 +295,7 @@ const generateSystemLatex = (type: "cases" | "array" | "piecewise", rows: number
 // =========================================================================
 const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }: {
     displayLatex: string,
-    type: "cases" | "array" | "piecewise",
+    type: "cases" | "array" | "matrix" | "piecewise",
     title: string,
     onInsert: (l: string) => void,
     borderColor?: string
@@ -296,7 +304,7 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
     const [hoveredSize, setHoveredSize] = useState({ r: 0, c: 0 });
     const buttonRef = useRef<HTMLDivElement>(null);
     const maxRows = 6;
-    const maxCols = 5; // Với hệ phương trình, 5 cột (VD: a, x, b, y, c) là khá dư dả
+    const maxCols = 6; // Với hệ phương trình, 5 cột (VD: a, x, b, y, c) là khá dư dả
 
     const handleSelect = (r: number, c: number) => {
         const latex = generateSystemLatex(type, r, c);
@@ -344,15 +352,15 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
                     styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff" } }}
                 >
                     <div style={{ textAlign: "center", marginBottom: "8px", fontWeight: "bold", fontSize: "12px", color: "#107c41" }}>
-                        {hoveredSize.r > 0 ? `Hệ: ${hoveredSize.r} dòng x ${hoveredSize.c} cột` : "Chọn kích thước"}
+                        {hoveredSize.r > 0 ? `Size: ${hoveredSize.r} rows x ${hoveredSize.c} columns` : "Choose size"}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onMouseLeave={() => setHoveredSize({ r: 0, c: 0 })}>
-                        {Array.from({ length: maxRows - 1 }).map((_, rowIndex) => (
+                        {Array.from({ length: maxRows }).map((_, rowIndex) => (
                             <div key={rowIndex} style={{ display: "flex", gap: "2px" }}>
                                 {Array.from({ length: maxCols }).map((_, colIndex) => {
-                                    const r = rowIndex + 2; // Bắt đầu từ 2 dòng
+                                    const r = rowIndex + 1; // Bắt đầu từ 1 dòng
                                     const c = colIndex + 1; // Bắt đầu từ 1 cột
-                                    const isHovered = r <= Math.max(2, hoveredSize.r) && c <= hoveredSize.c && hoveredSize.r > 0;
+                                    const isHovered = r <= hoveredSize.r && c <= hoveredSize.c && hoveredSize.r > 0;
 
                                     return (
                                         <div
@@ -488,8 +496,8 @@ const renderLatexTab = (latexStr: string) => {
             width: "100%",
             height: "100%",
         }}>
-        
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 8, cursor: "pointer" }} />
+
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 8, cursor: "pointer" }} />
 
             <math-field
                 read-only
@@ -536,13 +544,13 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
 
     return (
         <div ref={pivotWrapperRef} style={{ position: "relative", marginBottom: "10px" }}>
-            <DefaultButton 
-                onClick={() => scrollTabs('left')} 
+            <DefaultButton
+                onClick={() => scrollTabs('left')}
                 style={{ position: "absolute", top: 0, left: 0, zIndex: 50, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}
             >❮</DefaultButton>
-            
-            <DefaultButton 
-                onClick={() => scrollTabs('right')} 
+
+            <DefaultButton
+                onClick={() => scrollTabs('right')}
                 style={{ position: "absolute", top: 0, right: 0, zIndex: 50, minWidth: "32px", width: "32px", height: "44px", padding: 0, border: "none", backgroundColor: "#faf9f8", color: "#107c41", fontWeight: "bold" }}
             >❯</DefaultButton>
 
@@ -616,13 +624,10 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\underline{#0}" insertLatex="\underline{#0}" title="\underline" onInsert={onInsert} borderColor={PaletteColors.latex} />
                     </OverflowMathGroup>
                 </PivotItem>
-
-                {/* TAB 2: TOÁN TỬ & LOGIC */}
-                <PivotItem headerText="Logic"
-                    onRenderItemLink={() => renderLatexTab("\\div")}>
+                {/* Operator */}
+                <PivotItem headerText="Operator"
+                    onRenderItemLink={() => renderLatexTab("\\pm")}>
                     <OverflowMathGroup>
-
-
                         <MathBtn displayLatex="\times" insertLatex="\times" title="\times" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\div" insertLatex="\div" title="\div" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cdot" insertLatex="\cdot" title="\cdot" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -640,7 +645,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\gt" insertLatex="\gt" title="\gt" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ge" insertLatex="\ge" title="\ge" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\geqslant" insertLatex="\geqslant" title="\geqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\lt" insertLatex="\lt" title="\tt" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\lt" insertLatex="\lt" title="\lt" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\le" insertLatex="\le" title="\le" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\leqslant" insertLatex="\leqslant" title="\leqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
 
@@ -651,6 +656,126 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\neq" insertLatex="\neq" title="\neq" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\infty" insertLatex="\infty" title="\infty" onInsert={onInsert} borderColor={PaletteColors.default} />
 
+                        <VerticalDivider />
+
+                        <MathBtn displayLatex="\ast" insertLatex="\ast" title="\ast" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\star" insertLatex="\star" title="\star" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\dagger" insertLatex="\dagger" title="\dagger" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ddagger" insertLatex="\ddagger" title="\ddagger" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cap" insertLatex="\cap" title="\cap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cup" insertLatex="\cup" title="\cup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\uplus" insertLatex="\uplus" title="\uplus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqcap" insertLatex="\sqcap" title="\sqcap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqcup" insertLatex="\sqcup" title="\sqcup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\vee" insertLatex="\vee" title="\vee" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\wedge" insertLatex="\wedge" title="\wedge" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cdot" insertLatex="\cdot" title="\cdot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\diamond" insertLatex="\diamond" title="\diamond" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigtriangleup" insertLatex="\bigtriangleup" title="\bigtriangleup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\triangle" insertLatex="\triangle" title="\triangle" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigtriangledown" insertLatex="\bigtriangledown" title="\bigtriangledown" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\triangleleft" insertLatex="\triangleleft" title="\triangleleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\triangleright" insertLatex="\triangleright" title="\triangleright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigcirc" insertLatex="\bigcirc" title="\bigcirc" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bullet" insertLatex="\bullet" title="\bullet" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\wr" insertLatex="\wr" title="\wr" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\oplus" insertLatex="\oplus" title="\oplus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ominus" insertLatex="\ominus" title="\ominus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\otimes" insertLatex="\otimes" title="\otimes" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\oslash" insertLatex="\oslash" title="\oslash" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\odot" insertLatex="\odot" title="\odot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\circ" insertLatex="\circ" title="\circ" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\setminus" insertLatex="\setminus" title="\setminus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\amalg" insertLatex="\amalg" title="\amalg" onInsert={onInsert} borderColor={PaletteColors.default} />
+                    </OverflowMathGroup>
+                </PivotItem>
+
+                {/* TAB 2: TOÁN TỬ & LOGIC */}
+                <PivotItem headerText="Relation"
+                    onRenderItemLink={() => renderLatexTab("\\ge")}>
+                    <OverflowMathGroup>
+
+
+                        <VerticalDivider />
+                        <MathBtn displayLatex="<" insertLatex="<" title="<" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nless" insertLatex="\nless" title="\nless" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex=">" insertLatex=">" title=">" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ngtr" insertLatex="\ngtr" title="\ngtr" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\leq" insertLatex="\leq" title="\leq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nleq" insertLatex="\nleq" title="\nleq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\geq" insertLatex="\geq" title="\geq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ngeq" insertLatex="\ngeq" title="\ngeq" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\leqslant" insertLatex="\leqslant" title="\leqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nleqslant" insertLatex="\nleqslant" title="\nleqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\geqslant" insertLatex="\geqslant" title="\geqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ngeqslant" insertLatex="\ngeqslant" title="\ngeqslant" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\prec" insertLatex="\prec" title="\prec" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nprec" insertLatex="\nprec" title="\nprec" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\succ" insertLatex="\succ" title="\succ" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nsucc" insertLatex="\nsucc" title="\nsucc" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\preceq" insertLatex="\preceq" title="\preceq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\npreceq" insertLatex="\npreceq" title="\npreceq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\succeq" insertLatex="\succeq" title="\succeq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nsucceq" insertLatex="\nsucceq" title="\nsucceq" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\ll" insertLatex="\ll" title="\ll" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\gg" insertLatex="\gg" title="\gg" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\lll" insertLatex="\lll" title="\lll" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ggg" insertLatex="\ggg" title="\ggg" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\subset" insertLatex="\subset" title="\subset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\not\subset" insertLatex="\not\subset" title="\not\subset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\supset" insertLatex="\supset" title="\supset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\not\supset" insertLatex="\not\supset" title="\not\supset" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\subseteq" insertLatex="\subseteq" title="\subseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nsubseteq" insertLatex="\nsubseteq" title="\nsubseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\supseteq" insertLatex="\supseteq" title="\supseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nsupseteq" insertLatex="\nsupseteq" title="\nsupseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\sqsubset" insertLatex="\sqsubset" title="\sqsubset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqsubseteq" insertLatex="\sqsubseteq" title="\sqsubseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqsupset" insertLatex="\sqsupset" title="\sqsupset" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqsupseteq" insertLatex="\sqsupseteq" title="\sqsupseteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="=" insertLatex="=" title="=" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\doteq" insertLatex="\doteq" title="\doteq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\equiv" insertLatex="\equiv" title="\equiv" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\approx" insertLatex="\approx" title="\approx" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cong" insertLatex="\cong" title="\cong" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\simeq" insertLatex="\simeq" title="\simeq" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sim" insertLatex="\sim" title="\sim" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\propto" insertLatex="\propto" title="\propto" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\ne" insertLatex="\ne" title="\ne" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\neq" insertLatex="\neq" title="\neq" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\parallel" insertLatex="\parallel" title="\parallel" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nparallel" insertLatex="\nparallel" title="\nparallel" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\vdash" insertLatex="\vdash" title="\vdash" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\dashv" insertLatex="\dashv" title="\dashv" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\in" insertLatex="\in" title="\in" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ni" insertLatex="\ni" title="\ni" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\notin" insertLatex="\notin" title="\notin" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\smile" insertLatex="\smile" title="\smile" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\frown" insertLatex="\frown" title="\frown" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\asymp" insertLatex="\asymp" title="\asymp" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bowtie" insertLatex="\bowtie" title="\bowtie" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\models" insertLatex="\models" title="\models" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\perp" insertLatex="\perp" title="\perp" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bot" insertLatex="\bot" title="\bot" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\mid" insertLatex="\mid" title="\mid" onInsert={onInsert} borderColor={PaletteColors.default} />
 
                     </OverflowMathGroup>
                 </PivotItem>
@@ -711,9 +836,10 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 <PivotItem headerText="Giải tích"
                     onRenderItemLink={() => renderLatexTab("\\textstyle\\int")}>
                     <OverflowMathGroup>
-                        <MathBtn displayLatex="\int_{#0}^{#1}" insertLatex="\int_{#0}^{#1}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\oint" insertLatex="\oint" title="\oint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\int_{#0}^{#1}" insertLatex="\int_{#0}^{#1}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="#?\Big|_#?^#?" insertLatex="#0\Big|_#?^#?" title="{}\Big_{}^{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\iint" insertLatex="\iint_{#0}^{#?}" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\oint" insertLatex="\oint" title="\oint" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\lim_{#?}" insertLatex="\lim_{#?}" title="\lim" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\lim_{#? \to #?}" insertLatex="\lim_{#? \to #?}" title="\lim" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\log_{#0}{}" insertLatex="\log_{#0}{#?}" title="\log_{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -725,6 +851,40 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\partial" insertLatex="\partial" title="\partial" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\nabla" insertLatex="\nabla" title="\nabla" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="!" insertLatex="!" title="!" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <VerticalDivider />
+                        <MathBtn displayLatex="\small\sum_{n=0}^{\infty}" insertLatex="\sum_{n=0}^{\infty}" title="\sum" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\prod_{n=0}^{\infty}" insertLatex="\prod_{n=0}^{\infty}" title="\prod" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\coprod_{n=0}^{\infty}" insertLatex="\coprod_{n=0}^{\infty}" title="\coprod" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\int_{0}^{\infty}" insertLatex="\int_{0}^{\infty}" title="\int" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\intop_{0}^{\infty}" insertLatex="\intop_{0}^{\infty}" title="\intop" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\iint_{0}^{\infty}" insertLatex="\iint_{0}^{\infty}" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\iiint_{0}^{\infty}" insertLatex="\iiint_{0}^{\infty}" title="\iiint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\oint_{C}" insertLatex="\oint_{C}" title="\oint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\smallint" insertLatex="\smallint" title="\smallint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigcup" insertLatex="\bigcup" title="\bigcup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigcap" insertLatex="\bigcap" title="\bigcap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigvee" insertLatex="\bigvee" title="\bigvee" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigwedge" insertLatex="\bigwedge" title="\bigwedge" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\biguplus" insertLatex="\biguplus" title="\biguplus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigotimes" insertLatex="\bigotimes" title="\bigotimes" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigoplus" insertLatex="\bigoplus" title="\bigoplus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigodot" insertLatex="\bigodot" title="\bigodot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\bigsqcup" insertLatex="\bigsqcup" title="\bigsqcup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\oiint" insertLatex="\oiint" title="\oiint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\oiiint" insertLatex="\oiiint" title="\oiiint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\intclockwise" insertLatex="\intclockwise" title="\intclockwise" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\varointclockwise" insertLatex="\varointclockwise" title="\varointclockwise" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ointctrclockwise" insertLatex="\ointctrclockwise" title="\ointctrclockwise" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\intctrclockwise" insertLatex="\intctrclockwise" title="\intctrclockwise" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Cap" insertLatex="\Cap" title="\Cap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Cup" insertLatex="\Cup" title="\Cup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\doublecap" insertLatex="\doublecap" title="\doublecap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\doublecup" insertLatex="\doublecup" title="\doublecup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqcup" insertLatex="\sqcup" title="\sqcup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sqcap" insertLatex="\sqcap" title="\sqcap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\uplus" insertLatex="\uplus" title="\uplus" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\wr" insertLatex="\wr" title="\wr" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\amalg" insertLatex="\amalg" title="\amalg" onInsert={onInsert} borderColor={PaletteColors.default} />
                     </OverflowMathGroup>
                 </PivotItem>
 
@@ -735,12 +895,18 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         {/* CÁC NÚT HỆ PHƯƠNG TRÌNH / HÀM SỐ ĐÃ ĐƯỢC CHUYỂN SANG ĐỘNG */}
                         <SystemSelectorBtn displayLatex="\lbrace\text{■}" type="cases" title="\begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <SystemSelectorBtn displayLatex="\left[ \text{■}" type="array" title="\left[ \begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <SystemSelectorBtn displayLatex="\left[ \text{m}" type="matrix" title="\left[ \begin{matrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu} #? \\ #?, & \text{nếu} #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
 
                         {/* CÁC NÚT MA TRẬN ĐỘNG */}
                         <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <VerticalDivider />
+                        <MathBtn displayLatex="\binom{#?}{#?}" insertLatex="\binom{#0}{#?}" title="\binom{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\dbinom{#?}{#?}" insertLatex="\dbinom{#0}{#?}" title="\dbinom{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\tbinom{#?}{#?}" insertLatex="\tbinom{#0}{#?}" title="\tbinom{}{}" onInsert={onInsert} borderColor={PaletteColors.default} />
 
                         {/* Các nút phụ tĩnh trợ năng giữ nguyên */}
                         <MathBtn displayLatex="\text{[⋮]}" insertLatex="\begin{bmatrix} #? \\ #? \\ #? \end{bmatrix}" title="\begin{bmatrix} 3x1" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -764,6 +930,8 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\cot^{-1}" insertLatex="\cot^{-1}(#?)" title="\cot^{-1}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\pi" insertLatex="\pi" title="\pi" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="^\circ" insertLatex="^{\circ}" title="^{\circ}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\degree" insertLatex="\degree" title="\degree" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\angle" insertLatex="\angle" title="\angle" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\triangle" insertLatex="\triangle" title="\triangle" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\angle" insertLatex="\angle" title="\angle" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\perp" insertLatex="\perp" title="\perp" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -776,6 +944,24 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\widehat{#?}" insertLatex="\widehat{#0}" title="\widehat{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\overset{\frown}{#0}" insertLatex="\overset{\frown}{#0}" title="\overset{\frown}{}" onInsert={onInsert} />
                         <MathBtn displayLatex="\overset{\curvearrowright}{#0}" insertLatex="\overset{\curvearrowright}{#0}" title="\overset{\curvearrowright}{}" onInsert={onInsert} />
+                        <VerticalDivider />
+                        <MathBtn displayLatex="\overline{AB}" insertLatex="\overline{AB}" title="\overline{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\bigtriangleup" insertLatex="\bigtriangleup" title="\bigtriangleup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\cong" insertLatex="\cong" title="\cong" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\ncong" insertLatex="\ncong" title="\ncong" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\sim" insertLatex="\sim" title="\sim" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nsim" insertLatex="\nsim" title="\nsim" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\|" insertLatex="\|" title="\|" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\nparallel" insertLatex="\nparallel" title="\nparallel" onInsert={onInsert} borderColor={PaletteColors.default} />
+
+                        <MathBtn displayLatex="\bot" insertLatex="\bot" title="\bot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\not\perp" insertLatex="\not\perp" title="\not\perp" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\overrightarrow{AB}" insertLatex="\overrightarrow{AB}" title="\overrightarrow{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\overleftarrow{ABC}" insertLatex="\overleftarrow{\ABC}" title="\overleftarrow{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\vec{a}" insertLatex="\vec{a}" title="\vec{}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\measuredangle" insertLatex="\measuredangle" title="\measuredangle" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\square" insertLatex="\square" title="\square" onInsert={onInsert} borderColor={PaletteColors.default} />
                     </OverflowMathGroup>
                 </PivotItem>
 
@@ -798,6 +984,11 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\mu" insertLatex="\mu" title="\mu" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\text{\AA}" insertLatex="\text{\AA}" title="\text{\AA}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\hbar" insertLatex="\hbar" title="\hbar" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\mathscr{E}" insertLatex="\mathscr{E}" title="\mathscr{E}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <VerticalDivider />
+                        <MathBtn displayLatex="\ce{#? -> #?}" insertLatex="\ce{#0 -> #?}" title="\ce{#? -> #?}" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\ce{#? ->[a] #?}" insertLatex="\ce{#0 ->[#?] #?}" title="\ce{#? ->[#?] #?}" onInsert={onInsert} borderColor={PaletteColors.latex} />
+
                     </OverflowMathGroup>
                 </PivotItem>
 
@@ -819,6 +1010,17 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\underrightarrow{#?}" insertLatex="\underrightarrow{#0}" title="\underrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\overbrace{#?}" insertLatex="\overbrace{#0}" title="\overbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\underbrace{#?}" insertLatex="\underbrace{#0}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\dot{#?}" insertLatex="\dot{#0}" title="\dot" onInsert={onInsert} borderColor={PaletteColors.office} />
+
+                        <MathBtn displayLatex="\ddot{#?}" insertLatex="\ddot{#0}" title="\ddot" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\dddot{#?}" insertLatex="\dddot{#0}" title="\dddot" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\ddddot{#?}" insertLatex="\ddddot{#0}" title="\ddddot" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\mathring{#?}" insertLatex="\mathring{#0}" title="\mathring" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\tilde{#?}" insertLatex="\tilde{#0}" title="\tilde" onInsert={onInsert} borderColor={PaletteColors.office} />
+
+                        <MathBtn displayLatex="\breve{#?}" insertLatex="\breve{#0}" title="\breve" onInsert={onInsert} borderColor={PaletteColors.office} />
+                        <MathBtn displayLatex="\check{#?}" insertLatex="\check{#0}" title="\check" onInsert={onInsert} borderColor={PaletteColors.office} />
+
                     </OverflowMathGroup>
                 </PivotItem>
 
@@ -851,6 +1053,67 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\xlongequal{ab}" insertLatex="\xlongequal{#0}" title="\xlongequal" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\xrightarrow[xy]{ab}" insertLatex="\xrightarrow[#0]{#?}" title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\xmapsto{ab}" insertLatex="\xmapsto{#0}" title="\xmapsto" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <VerticalDivider />
+                        
+                        
+                        <MathBtn displayLatex="\twoheadrightarrow" insertLatex="\twoheadrightarrow" title="\twoheadrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\twoheadleftarrow" insertLatex="\twoheadleftarrow" title="\twoheadleftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightarrowtail" insertLatex="\rightarrowtail" title="\rightarrowtail" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftarrowtail" insertLatex="\leftarrowtail" title="\leftarrowtail" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\dashrightarrow" insertLatex="\dashrightarrow" title="\dashrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\dashleftarrow" insertLatex="\dashleftarrow" title="\dashleftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\longrightarrow" insertLatex="\longrightarrow" title="\longrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\longleftarrow" insertLatex="\longleftarrow" title="\longleftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\longleftrightarrow" insertLatex="\longleftrightarrow" title="\longleftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
+                        
+                        <MathBtn displayLatex="\Longrightarrow" insertLatex="\Longrightarrow" title="\Longrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\Longleftarrow" insertLatex="\Longleftarrow" title="\Longleftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\Longleftrightarrow" insertLatex="\Longleftrightarrow" title="\Longleftrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
+                        <MathBtn displayLatex="\longmapsto" insertLatex="\longmapsto" title="\longmapsto" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\multimap" insertLatex="\multimap" title="\multimap" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
+                        
+                        <MathBtn displayLatex="\updownarrow" insertLatex="\updownarrow" title="\updownarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Uparrow" insertLatex="\Uparrow" title="\Uparrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Downarrow" insertLatex="\Downarrow" title="\Downarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Updownarrow" insertLatex="\Updownarrow" title="\Updownarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightharpoonup" insertLatex="\rightharpoonup" title="\rightharpoonup" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
+                        <MathBtn displayLatex="\rightharpoondown" insertLatex="\rightharpoondown" title="\rightharpoondown" onInsert={onInsert} borderColor={PaletteColors.default} />
+                       
+                        <MathBtn displayLatex="\rightleftharpoons" insertLatex="\rightleftharpoons" title="\rightleftharpoons" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftrightharpoons" insertLatex="\leftrightharpoons" title="\leftrightharpoons" onInsert={onInsert} borderColor={PaletteColors.default} />                       
+                        <MathBtn displayLatex="\Rrightarrow" insertLatex="\Rrightarrow" title="\Rrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Lleftarrow" insertLatex="\Lleftarrow" title="\Lleftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftrightarrows" insertLatex="\leftrightarrows" title="\leftrightarrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightleftarrows" insertLatex="\rightleftarrows" title="\rightleftarrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\curvearrowright" insertLatex="\curvearrowright" title="\curvearrowright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\curvearrowleft" insertLatex="\curvearrowleft" title="\curvearrowleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\hookrightarrow" insertLatex="\hookrightarrow" title="\hookrightarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\hookleftarrow" insertLatex="\hookleftarrow" title="\hookleftarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\looparrowright" insertLatex="\looparrowright" title="\looparrowright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\looparrowleft" insertLatex="\looparrowleft" title="\looparrowleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\circlearrowright" insertLatex="\circlearrowright" title="\circlearrowright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\circlearrowleft" insertLatex="\circlearrowleft" title="\circlearrowleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightrightarrows" insertLatex="\rightrightarrows" title="\rightrightarrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftleftarrows" insertLatex="\leftleftarrows" title="\leftleftarrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\upuparrows" insertLatex="\upuparrows" title="\upuparrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\downdownarrows" insertLatex="\downdownarrows" title="\downdownarrows" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Rsh" insertLatex="\Rsh" title="\Rsh" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\Lsh" insertLatex="\Lsh" title="\Lsh" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\upharpoonright" insertLatex="\upharpoonright" title="\upharpoonright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\upharpoonleft" insertLatex="\upharpoonleft" title="\upharpoonleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\downharpoonright" insertLatex="\downharpoonright" title="\downharpoonright" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\downharpoonleft" insertLatex="\downharpoonleft" title="\downharpoonleft" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\restriction" insertLatex="\restriction" title="\restriction" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\rightsquigarrow" insertLatex="\rightsquigarrow" title="\rightsquigarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leftrightsquigarrow" insertLatex="\leftrightsquigarrow" title="\leftrightsquigarrow" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\leadsto" insertLatex="\leadsto" title="\leadsto" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <VerticalDivider />
+                        {/* Hàng 1 */}
+                       
                     </OverflowMathGroup>
                 </PivotItem>
 
@@ -933,6 +1196,28 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\boxed{AB}" insertLatex="\boxed{#0}" title="\boxed" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\phase{60^\circ}" insertLatex="\phase{#0}" title="\phase{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\enclose{roundedbox updiagonalstrike}{x=0}" insertLatex="\enclose{roundedbox updiagonalstrike}{#0}" title="\enclose{roundedbox updiagonalstrike}{}" onInsert={onInsert} borderColor={PaletteColors.office} />
+                         <MathBtn displayLatex="\angl{#?}" insertLatex="\angl{#0}" title="\angl{}" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <VerticalDivider />
+                        <MathBtn displayLatex="\xrightarrow[\text{long text below}]{}" insertLatex="\xrightarrow[#?]{#0}" title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightarrow{\text{long text above}}" insertLatex="\xrightarrow{#0}" title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightarrow[\text{and below}]{\text{long text above}}" insertLatex="\xrightarrow[#?]{#0}" title="\xrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xlongequal[a]{b}" insertLatex="\xlongequal[#?]{#0}" title="\xlongequal" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftarrow[a]{b}" insertLatex="\xleftarrow[#?]{#0}" title="\xleftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftrightarrow[a]{b}" insertLatex="\xleftrightarrow[#?]{#0}" title="\xleftrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xtwoheadrightarrow[a]{b}" insertLatex="\xtwoheadrightarrow[#?]{#0}" title="\xtwoheadrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xtwoheadleftarrow[a]{b}" insertLatex="\xtwoheadleftarrow[#?]{#0}" title="\xtwoheadleftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xRightarrow[a]{b}" insertLatex="\xRightarrow[#?]{#0}" title="\xRightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xLeftarrow[a]{b}" insertLatex="\xLeftarrow[#?]{#0}" title="\xLeftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightharpoonup[a]{b}" insertLatex="\xrightharpoonup[#?]{#0}" title="\xrightharpoonup" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftharpoonup[a]{b}" insertLatex="\xleftharpoonup[#?]{#0}" title="\xleftharpoonup" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightharpoondown[a]{b}" insertLatex="\xrightharpoondown[#?]{#0}" title="\xrightharpoondown" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftharpoondown[a]{b}" insertLatex="\xleftharpoondown[#?]{#0}" title="\xleftharpoondown" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xrightleftharpoons[a]{b}" insertLatex="\xrightleftharpoons[#?]{#0}" title="\xrightleftharpoons" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xleftrightharpoons[a]{b}" insertLatex="\xleftrightharpoons[#?]{#0}" title="\xleftrightharpoons" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xhookrightarrow[a]{b}" insertLatex="\xhookrightarrow[#?]{#0}" title="\xhookrightarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xhookleftarrow[a]{b}" insertLatex="\xhookleftarrow[#?]{#0}" title="\xhookleftarrow" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xmapsto[a]{b}" insertLatex="\xmapsto[#?]{#0}" title="\xmapsto" onInsert={onInsert} borderColor={PaletteColors.latex} />
+                        <MathBtn displayLatex="\xtofrom[a]{b}" insertLatex="\xtofrom[#?]{#0}" title="\xtofrom" onInsert={onInsert} borderColor={PaletteColors.latex} />
                     </OverflowMathGroup>
                 </PivotItem>
 

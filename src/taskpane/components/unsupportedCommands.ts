@@ -12,4 +12,22 @@ export const unsupportedMathMlCommands = [
   "\\overleftarrow{",
   "\\overleftrightarrow{",
   "\\ce{",
+  "\\mathring{",
+  "\\xLeftarrow[",
+  "\\xRightarrow[",
+  "\\xleftrightharpoons[",
+  "\\xlongequal",
+  "\\longleftrightarrow",
+  "\\xlongequal[",
+  "\\xmapsto[",
+  "\\xtofrom[",
+  "\\xrightharpoondown[",
+  "\\xrightharpoonup[",
+  "\\xleftharpoondown[",
+  "\\xleftharpoonup[",
+  "\\xhookrightarrow[",
+  "\\xhookleftarrow[",
+  "\\angl{",
+
+
 ];

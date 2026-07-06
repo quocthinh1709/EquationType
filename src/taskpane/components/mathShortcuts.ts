@@ -246,6 +246,7 @@ export const customMacros = {
     // ==========================================
     // VẬT LÝ
     // ==========================================
+    "suatdiendong":"\\mathscr{E}",
     "chuyendong": "x = x_0 + v_0 t + \\frac{1}{2} a t^2",
     "chukylolxo": "T = 2\\pi \\sqrt{\\frac{m}{k}}",
     "chukyconlacdon": "T = 2\\pi \\sqrt{\\frac{l}{g}}",
