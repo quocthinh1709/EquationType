@@ -28,6 +28,8 @@ export const unsupportedMathMlCommands = [
   "\\xhookrightarrow[",
   "\\xhookleftarrow[",
   "\\angl{",
+  "\\xrightleftharpoons{",
+  "\\xleftrightarrow{",
 
 
 ];
