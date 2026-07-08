@@ -1161,8 +1161,8 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                         <MathBtn displayLatex="\imath" insertLatex="\imath" title="\imath" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\jmath" insertLatex="\jmath" title="\jmath" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\ell" insertLatex="\ell" title="\ell" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\iiint" insertLatex="\iiint" title="\iiint" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\iiint" insertLatex="\iiint" title="\iiint" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\small\iint" insertLatex="\iint" title="\iint" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\sharp" insertLatex="\sharp" title="\sharp" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\flat" insertLatex="\flat" title="\flat" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\natural" insertLatex="\natural" title="\natural" onInsert={onInsert} borderColor={PaletteColors.default} />

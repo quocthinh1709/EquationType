@@ -341,6 +341,205 @@ export default function App() {
     }
   }
 
+/// ==========================================
+  // HÀM 3: TỰ VẼ SVG NGUYÊN BẢN (NATIVE SVG) CHO PHÉP TÍNH DỌC
+  // ==========================================
+  const handleInsertVerticalMath = async () => {
+    if (!currentLatex) return;
+
+    let bieuThuc = currentLatex.trim();
+    const laPhepNhan = bieuThuc.includes('\\times') || bieuThuc.includes('\\cdot') || bieuThuc.includes('*') || bieuThuc.includes('x');
+    
+    let svgString = "";
+    let mathWidthEx = 0;
+    let mathHeightEx = 0;
+
+    // Các hằng số định dạng lưới SVG
+    const CHAR_W = 16.5; 
+    const LINE_H = 32;   
+    const MARGIN = 15;   
+    // Đã bỏ fill="black" ở đây để tránh lỗi lặp thuộc tính XML trong Word
+    //const FONT_STYLE = `font-family="Courier New, monospace" font-size="28px" font-weight="bold"`;
+    //const FONT_STYLE = `font-family="Times New Roman, serif" font-size="28px"`;
+    const FONT_STYLE = `font-family="Arial, monospace" font-size="28px"`;
+
+    try {
+      if (laPhepNhan) {
+        // -----------------------------
+        // VẼ NATIVE SVG CHO PHÉP NHÂN
+        // -----------------------------
+        let chuoiSach = bieuThuc.replace(/\\times/g, '*').replace(/\\cdot/g, '*').replace(/x/g, '*').replace(/\\text\{\*\}/g, '*');
+        const mangSo = chuoiSach.split('*');
+        if (mangSo.length !== 2) throw new Error("Sai định dạng");
+        
+        let strSo1 = mangSo[0].trim();
+        let strSo2 = mangSo[1].trim();
+        let nSo1 = parseInt(strSo1, 10);
+        let nSo2 = parseInt(strSo2, 10);
+        let ketQuaCuoi = (nSo1 * nSo2).toString();
+        
+        const maxChars = Math.max(strSo1.length, strSo2.length, ketQuaCuoi.length);
+        const width = maxChars * CHAR_W + MARGIN * 3;
+        
+        let linesCount = 2; 
+        let partials = [];
+        if (strSo2.length > 1) {
+          for (let i = strSo2.length - 1; i >= 0; i--) {
+            partials.push((nSo1 * parseInt(strSo2[i], 10)).toString());
+          }
+          linesCount += partials.length + 1; 
+        } else {
+          linesCount += 1; 
+        }
+        
+        const height = linesCount * LINE_H + MARGIN * 2;
+        mathWidthEx = width / 14; 
+        mathHeightEx = height / 14;
+
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+        
+        const rightEdge = width - MARGIN;
+        
+        svgString += `<text x="${rightEdge}" y="${LINE_H + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo1}</text>`;
+        svgString += `<text x="${rightEdge}" y="${LINE_H * 2 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo2}</text>`;
+        
+        //svgString += `<text x="${MARGIN}" y="${LINE_H * 1.5 + MARGIN}" ${FONT_STYLE} fill="black">×</text>`;
+        
+        let offsetDauNhanX = rightEdge - Math.max(strSo1.length, strSo2.length) * CHAR_W - 10;
+        svgString += `<text x="${offsetDauNhanX}" y="${LINE_H * 1.5 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">×</text>`;
+        
+        svgString += `<line x1="${MARGIN}" y1="${LINE_H * 2 + MARGIN + 8}" x2="${rightEdge}" y2="${LINE_H * 2 + MARGIN + 8}" stroke="black" stroke-width="3"/>`;
+        
+        let currentY = LINE_H * 3 + MARGIN + 6;
+
+        if (partials.length === 0) {
+          svgString += `<text x="${rightEdge}" y="${currentY}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+        } else {
+          partials.forEach((p, index) => {
+            let offsetRight = rightEdge - (index * CHAR_W);
+            svgString += `<text x="${offsetRight}" y="${currentY}" text-anchor="end" ${FONT_STYLE} fill="black">${p}</text>`;
+            currentY += LINE_H;
+          });
+          svgString += `<line x1="${MARGIN}" y1="${currentY - LINE_H + 12}" x2="${rightEdge}" y2="${currentY - LINE_H + 12}" stroke="black" stroke-width="3"/>`;
+          svgString += `<text x="${rightEdge}" y="${currentY + 8}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+        }
+        svgString += `</svg>`;
+
+      } else {
+        // -----------------------------
+        // VẼ NATIVE SVG CHO PHÉP CHIA
+        // -----------------------------
+        let strBiChia = ""; let strChia = "";
+        if (bieuThuc.includes('\\frac')) {
+          const match = bieuThuc.match(/\\frac\{([0-9]+)\}\{([0-9]+)\}/);
+          if (match) { strBiChia = match[1]; strChia = match[2]; }
+        } else {
+          let chuoiSach = bieuThuc.replace(/\\div/g, '/').replace(/\\text\{\/\}/g, '/');
+          const mangSo = chuoiSach.split('/');
+          if (mangSo.length === 2) { strBiChia = mangSo[0].trim(); strChia = mangSo[1].trim(); }
+        }
+
+        const nBiChia = parseInt(strBiChia, 10);
+        const nChia = parseInt(strChia, 10);
+        if (isNaN(nBiChia) || isNaN(nChia) || nChia === 0) throw new Error("Sai định dạng");
+
+        let thuong = "";
+        let leftRows = []; 
+        leftRows.push({ text: strBiChia, spaces: 0 });
+
+        let soDuStr = ""; let chiSo = 0; let laLuotDauTien = true;
+
+        while (chiSo < strBiChia.length) {
+          if (laLuotDauTien) {
+            let soTamStr = strBiChia[chiSo];
+            while (parseInt(soTamStr, 10) < nChia && chiSo + 1 < strBiChia.length) {
+              chiSo++; soTamStr += strBiChia[chiSo];
+            }
+            let nTam = parseInt(soTamStr, 10);
+            thuong += Math.floor(nTam / nChia).toString();
+            soDuStr = (nTam % nChia).toString();
+            laLuotDauTien = false; chiSo++;
+          } else {
+            let chuSoHa = strBiChia[chiSo];
+            let dongHaSo = soDuStr + chuSoHa;
+            let viTriHa = chiSo + 1;
+            leftRows.push({ text: dongHaSo, spaces: Math.max(0, viTriHa - dongHaSo.length) });
+
+            let nTam = parseInt(dongHaSo, 10);
+            thuong += Math.floor(nTam / nChia).toString();
+            soDuStr = (nTam % nChia).toString();
+            chiSo++;
+          }
+        }
+        let viTriCuoi = strBiChia.length;
+        leftRows.push({ text: soDuStr, spaces: Math.max(0, viTriCuoi - soDuStr.length) });
+
+        const leftMaxChars = strBiChia.length;
+        const rightMaxChars = Math.max(strChia.length, thuong.length);
+        const width = (leftMaxChars + rightMaxChars + 2) * CHAR_W + MARGIN * 3;
+        const height = Math.max(leftRows.length, 2) * LINE_H + MARGIN * 2;
+        
+        mathWidthEx = width / 14; 
+        mathHeightEx = height / 14;
+
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+        
+        const vLineX = MARGIN + leftMaxChars * CHAR_W + (CHAR_W / 2);
+        svgString += `<line x1="${vLineX}" y1="${MARGIN / 2}" x2="${vLineX}" y2="${height - MARGIN}" stroke="black" stroke-width="3"/>`;
+
+        leftRows.forEach((row, idx) => {
+          let xPos = MARGIN + row.spaces * CHAR_W;
+          let yPos = (idx + 1) * LINE_H + MARGIN / 2;
+          // Truyền màu thủ công cho từng dòng bên trái
+          svgString += `<text x="${xPos}" y="${yPos}" ${FONT_STYLE} fill="black">${row.text}</text>`;
+        });
+
+        const rightX = vLineX + CHAR_W;
+        svgString += `<text x="${rightX}" y="${LINE_H + MARGIN / 2}" ${FONT_STYLE} fill="black">${strChia}</text>`;
+        svgString += `<line x1="${vLineX}" y1="${LINE_H + MARGIN / 2 + 8}" x2="${width - MARGIN}" y2="${LINE_H + MARGIN / 2 + 8}" stroke="black" stroke-width="3"/>`;
+        
+        // Gọi riêng màu xanh cho thương số, không bị đụng độ thuộc tính
+        svgString += `<text x="${rightX}" y="${LINE_H * 2 + MARGIN / 2 + 4}" ${FONT_STYLE} fill="#010101">${thuong || "0"}</text>`;
+
+        svgString += `</svg>`;
+      }
+
+      // -- CHUYỂN ĐỔI SVG SANG BASE64 VÀ CHÈN VÀO WORD --
+      let utf8Encoded = encodeURIComponent(svgString).replace(/%([0-9A-F]{2})/g, (_match, p1) => String.fromCharCode(parseInt(p1, 16)));
+      let insertContent = window.btoa(utf8Encoded);
+
+      const eqId = "LSTS_VERT_" + new Date().getTime();
+      Office.context.document.settings.set(eqId, bieuThuc); 
+      await Office.context.document.settings.saveAsync();
+
+      await Word.run(async (context) => {
+        const range = context.document.getSelection();
+        range.load("font/size");
+        await context.sync();
+        
+        const currentFontSize = range.font.size || 12;
+        const exToPt = currentFontSize * 0.44;
+
+        const picture = range.insertInlinePictureFromBase64(insertContent, Word.InsertLocation.replace);
+        picture.width = mathWidthEx * exToPt;
+        picture.height = mathHeightEx * exToPt;
+        picture.lockAspectRatio = true;
+
+        const newCc = picture.getRange().insertContentControl();
+        newCc.title = "LSTS_Math"; 
+        newCc.tag = eqId + "|SVG";
+        newCc.appearance = Word.ContentControlAppearance.hidden;
+        await context.sync();
+      });
+
+    } catch (err) {
+      console.log("Lỗi tạo tính dọc: ", err);
+      alert("Định dạng chưa đúng. Ví dụ nhập: 245*12 hoặc 1276/4");
+    }
+  };
+
+
+
   // ==========================================
   // KHỞI TẠO VÀ "NGHE NGÓNG" THAO TÁC CỦA NGƯỜI DÙNG
   // ==========================================
@@ -578,6 +777,16 @@ export default function App() {
                     icon: { fontSize: 12, color: currentLatex ? "#107c41" : undefined }
                   }}
                 />
+
+                <DefaultButton
+                text="Nhân/Chia dọc"
+                iconProps={{ iconName: "CalculatorAddition" }}
+                onClick={handleInsertVerticalMath}
+                style={{ height: "44px", borderRadius: "8px" }}
+                title="Tự động tính và chèn phép nhân/chia dọc (SVG)"
+              />
+
+
               </Stack>
             </Stack>
 
@@ -622,7 +831,7 @@ export default function App() {
 
             <DefaultButton
               primary
-              text="Insert/Update"
+              text="Insert"
               onClick={handleInsertEquation}
               style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
               title="Insert new equation or update selected equation"
