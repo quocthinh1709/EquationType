@@ -8,6 +8,7 @@ export const PaletteColors = {
     default: undefined  // Để mặc định của hệ thống
 };
 
+
 declare global {
     namespace JSX {
         interface IntrinsicElements {
@@ -241,8 +242,9 @@ const generateMatrixLatex = (matrixType: string, rows: number, cols: number) => 
 // =========================================================================
 // LOGIC: Hàm sinh mã LaTeX động cho Hệ Phương Trình & Hàm Số (Đã làm tổng quát)
 // =========================================================================
-const generateSystemLatex = (type: "cases" | "array" | "matrix" | "piecewise" | "array2", rows: number, cols: number) => {
+const generateSystemLatex = (type: "cases" | "array" | "matrix" | "piecewise" | "array2", rows: number, cols: number,  language: "vi" | "en") => {
     let latex = "";
+    const ifText = language === "vi" ? "nếu " : "if ";
 
     if (type === "cases") {
         // Hệ và (Ngoặc nhọn lớn)
@@ -305,12 +307,13 @@ const generateSystemLatex = (type: "cases" | "array" | "matrix" | "piecewise" | 
 // =========================================================================
 // COMPONENT: Nút chọn Hệ phương trình / Hàm số (Lưới 2D: Dòng x Cột)
 // =========================================================================
-const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }: {
+const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor, language }: {
     displayLatex: string,
     type: "cases" | "array" | "matrix" | "piecewise" | "array2",
     title: string,
     onInsert: (l: string) => void,
-    borderColor?: string
+    borderColor?: string,
+    language: "vi" | "en"
 }) => {
     const [isCalloutVisible, setIsCalloutVisible] = useState(false);
     const [hoveredSize, setHoveredSize] = useState({ r: 0, c: 0 });
@@ -319,7 +322,7 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
     const maxCols = 6; // Với hệ phương trình, 5 cột (VD: a, x, b, y, c) là khá dư dả
 
     const handleSelect = (r: number, c: number) => {
-        const latex = generateSystemLatex(type, r, c);
+        const latex = generateSystemLatex(type, r, c, language);
         onInsert(latex);
         setIsCalloutVisible(false);
         setHoveredSize({ r: 0, c: 0 });
@@ -364,7 +367,7 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
                     styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff" } }}
                 >
                     <div style={{ textAlign: "center", marginBottom: "8px", fontWeight: "bold", fontSize: "12px", color: "#107c41" }}>
-                        {hoveredSize.r > 0 ? `Size: ${hoveredSize.r} rows x ${hoveredSize.c} columns` : "Choose size"}
+                       {hoveredSize.r > 0 ? `${language === 'vi' ? 'Hệ' : 'Size'}: ${hoveredSize.r} x ${hoveredSize.c}` : (language === 'vi' ? "Chọn kích thước" : "Choose size")}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onMouseLeave={() => setHoveredSize({ r: 0, c: 0 })}>
                         {Array.from({ length: maxRows }).map((_, rowIndex) => (
@@ -401,12 +404,13 @@ const SystemSelectorBtn = ({ displayLatex, type, title, onInsert, borderColor }:
 // ==========================================
 // THÊM MỚI: NÚT BẤM CÓ HIỂN THỊ POPUP CHỌN KÍCH THƯỚC MA TRẬN
 // ==========================================
-const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderColor }: {
+const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderColor, language }: {
     displayLatex: string,
     matrixType: string, // VD: pmatrix, bmatrix, vmatrix
     title: string,
     onInsert: (l: string) => void,
-    borderColor?: string
+    borderColor?: string,
+    language: "vi" | "en"
 }) => {
     const [isCalloutVisible, setIsCalloutVisible] = useState(false);
     const [hoveredSize, setHoveredSize] = useState({ r: 0, c: 0 });
@@ -461,7 +465,7 @@ const MatrixSelectorBtn = ({ displayLatex, matrixType, title, onInsert, borderCo
                     styles={{ calloutMain: { padding: "10px", backgroundColor: "#ffffff" } }}
                 >
                     <div style={{ textAlign: "center", marginBottom: "8px", fontWeight: "bold", fontSize: "12px", color: "#107c41" }}>
-                        {hoveredSize.r > 0 ? `${hoveredSize.r} x ${hoveredSize.c} Matrix` : "Chọn kích thước"}
+                        {hoveredSize.r > 0 ? `${language === 'vi' ? 'Ma trận' : 'Matrix'}: ${hoveredSize.r} x ${hoveredSize.c}` : (language === 'vi' ? "Chọn kích thước" : "Choose size")}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: "2px" }} onMouseLeave={() => setHoveredSize({ r: 0, c: 0 })}>
                         {Array.from({ length: maxRows }).map((_, rowIndex) => (
@@ -534,12 +538,52 @@ const renderLatexTab = (latexStr: string) => {
     );
 };
 
+
+// ==========================================
+// THÊM: Dictionary cho Tab Header
+// ==========================================
+const tabText = {
+    vi: {
+        basic: "Cơ bản",
+        relation: "Relation",
+        sets: "Sets",
+        calculus: "Giải tích",
+        systems: "Hệ & Ma trận",
+        trigo: "Lượng giác",
+        physics: "Lý & Hóa",
+        accents: "Accents",
+        arrows: "Arrows",
+        symbols: "Symbols",
+        annotation: "Annotation",
+        greek: "Greek letters"
+    },
+    en: {
+        basic: "Basic",
+        relation: "Relation",
+        sets: "Sets",
+        calculus: "Calculus",
+        systems: "Systems & Matrices",
+        trigo: "Trigonometry",
+        physics: "Physics & Chem",
+        accents: "Accents",
+        arrows: "Arrows",
+        symbols: "Symbols",
+        annotation: "Annotation",
+        greek: "Greek letters"
+    }
+};
+
 export interface MathPaletteProps {
     onInsert: (latexCode: string) => void;
+    language: "vi" | "en";
 }
 
-export default function MathPalette({ onInsert }: MathPaletteProps) {
+export default function MathPalette({ onInsert, language }: MathPaletteProps) {
     const pivotWrapperRef = React.useRef<HTMLDivElement>(null);
+    const t = tabText[language];
+    
+    // Từ khóa "nếu" cho hàm số phân nhánh
+    const ifStr = language === "vi" ? "nếu " : "if ";
     const scrollTabs = (direction: 'left' | 'right') => {
         if (pivotWrapperRef.current) {
             // Trở về cách gọi gốc: Tìm đúng thẻ tablist của Fluent UI
@@ -615,7 +659,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 }}>
 
                 {/* TAB 1: ĐẠI SỐ CƠ BẢN */}
-                <PivotItem headerText="Cơ bản"
+                <PivotItem headerText={t.basic}
                     onRenderItemLink={() => renderLatexTab("\\frac{#?}{#?}")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\frac{#0}{#?}" insertLatex="\frac{#0}{#?}" title="\frac" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -640,7 +684,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     </OverflowMathGroup>
                 </PivotItem>
                 {/* Operator */}
-                <PivotItem headerText="Operator"
+                <PivotItem headerText={t.relation}
                     onRenderItemLink={() => renderLatexTab("\\pm")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\times" insertLatex="\times" title="\times" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -706,7 +750,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 </PivotItem>
 
                 {/* TAB 2: TOÁN TỬ & LOGIC */}
-                <PivotItem headerText="Relation"
+                <PivotItem headerText={t.sets}
                     onRenderItemLink={() => renderLatexTab("\\ge")}>
                     <OverflowMathGroup>
 
@@ -796,7 +840,7 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                 </PivotItem>
 
                 {/* TẬP HỢP */}
-                <PivotItem headerText="Sets"
+                <PivotItem headerText={t.sets}
                     onRenderItemLink={() => renderLatexTab("\\forall")}>
                     <OverflowMathGroup>
                         <MathBtn displayLatex="\forall" insertLatex="\forall" title="\forall" onInsert={onInsert} borderColor={PaletteColors.default} />
@@ -908,17 +952,17 @@ export default function MathPalette({ onInsert }: MathPaletteProps) {
                     onRenderItemLink={() => renderLatexTab("\\begin{bmatrix} a &b \\\\ c &d \\end{bmatrix}")}>
                     <OverflowMathGroup>
                         {/* CÁC NÚT HỆ PHƯƠNG TRÌNH / HÀM SỐ ĐÃ ĐƯỢC CHUYỂN SANG ĐỘNG */}
-                        <SystemSelectorBtn displayLatex="\lbrace\text{■}" type="cases" title="\begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <SystemSelectorBtn displayLatex="\left[ \text{■}" type="array2" title="\left[ \begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <SystemSelectorBtn displayLatex="\left[ \text{m}" type="matrix" title="\left[ \begin{matrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <SystemSelectorBtn displayLatex="\text{■}" type="array" title="\begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <SystemSelectorBtn displayLatex="\lbrace\text{■}" type="cases" title="\begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} language={language} />
+                        <SystemSelectorBtn displayLatex="\left[ \text{■}" type="array2" title="\left[ \begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} language={language} />
+                        <SystemSelectorBtn displayLatex="\left[ \text{m}" type="matrix" title="\left[ \begin{matrix}" onInsert={onInsert} borderColor={PaletteColors.default} language={language} />
+                        <SystemSelectorBtn displayLatex="\text{■}" type="array" title="\begin{array}" onInsert={onInsert} borderColor={PaletteColors.default} language={language} />
                         
 
                         {/* CÁC NÚT MA TRẬN ĐỘNG */}
-                        <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MatrixSelectorBtn displayLatex="\text{||■||}" matrixType="Vmatrix" title="\begin{Vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MatrixSelectorBtn displayLatex="\text{(■)}" matrixType="pmatrix" title="\begin{pmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} language={language}/>
+                        <MatrixSelectorBtn displayLatex="\text{[■]}" matrixType="bmatrix" title="\begin{bmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} language={language}/>
+                        <MatrixSelectorBtn displayLatex="\text{|■|}" matrixType="vmatrix" title="\begin{vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} language={language}/>
+                        <MatrixSelectorBtn displayLatex="\text{||■||}" matrixType="Vmatrix" title="\begin{Vmatrix}" onInsert={onInsert} borderColor={PaletteColors.default} language={language}/>
                         <MathBtn displayLatex="f(x) = \lbrace" insertLatex="f(x) = \begin{cases} #?, & \text{nếu } #? \\ #?, & \text{nếu } #? \end{cases}" title="f(x) \begin{cases}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="f(x) = \rbrace" insertLatex="f(n)=\begin{rcases} #0 & \text{if } #? \\ #? & \text{if }#?\end{rcases}" title="f(x) \begin{rcases}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <VerticalDivider />

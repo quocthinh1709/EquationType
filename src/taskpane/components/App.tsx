@@ -32,6 +32,112 @@ const officeGreenTheme = createTheme({
 
 MathfieldElement.fontsDirectory = "./fonts";
 
+
+// ==========================================
+// THÊM: Từ điển dịch UI
+// ==========================================
+type Language = "vi" | "en";
+const uiText = {
+  vi: {
+    webWarning: "Phiên bản Web không được hỗ trợ chèn vào Word!\nĐể chèn công thức, vui lòng nhấn nút \"Mở trong ứng dụng trên máy tính\" (Open in Desktop App) trên thanh công cụ của Word.",
+    mathLiveLabel: "Math Live:",
+    latexLabel: "LaTeX:",
+    importDict: "Nhập Từ điển",
+    exportDict: "Xuất Từ điển",
+    editDict: "Sửa Từ điển",
+    saveToDict: "Lưu vào Từ điển",
+    modeLabel: "Chế độ:",
+    eEditorOnly: "E-Editor (Chỉ)",
+    eEditor: "E-Editor",
+    office: "Office",
+    officeMathWarning: "⚠️ Office Math không được hỗ trợ. Chỉ chèn kiểu E-Editor.",
+    insertBtn: "Chèn / Cập nhật",
+    computeLabel: "Tính toán:",
+    evaluate: "Tính giá trị",
+    simplify: "Rút gọn",
+    expand: "Khai triển",
+    expandAll: "Khai triển hết",
+    factor: "Nhân tử",
+    solve: "Giải PT",
+    resultLabel: "Kết quả:",
+    insertToWord: "Chèn vào Word",
+    previewVertical: "Xem trước phép tính dọc:",
+    addDictTitle: "Thêm vào từ điển",
+    addDictSubText: "Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.",
+    inlineOpt: "Inline (Tự động chuyển đổi khi gõ)",
+    macroOpt: "Macro (Gõ kèm dấu \\ phía trước để gợi ý)",
+    shortcutLabel: "Phím tắt (không gõ '\\' ở trước)",
+    shortcutPlaceholder: "VD: ptb, hpt...",
+    saveBtn: "Lưu",
+    cancelBtn: "Hủy",
+    manageDictTitle: "Quản lý Từ điển",
+    searchPlaceholder: "Tìm phím tắt hoặc mã LaTeX...",
+    inlineHeader: "Phím tắt gõ nhanh (Inline)",
+    macroHeader: "Lệnh Macro (\\)",
+    deleteTitle: "Xóa phím tắt này",
+    showingResults: "* Đang hiển thị 10 / {0} kết quả. Hãy nhập thêm từ khóa để tìm chính xác hơn.",
+    emptyDict: "Từ điển đang trống.",
+    saveChanges: "Lưu thay đổi",
+    enterShortcutAlert: "Vui lòng nhập phím tắt!",
+    importSuccessAlert: "Nhập từ điển thành công! Các phím tắt cũ của bạn vẫn được giữ nguyên.",
+    importStructErrorAlert: "Cấu trúc file JSON không đúng chuẩn từ điển (Thiếu inline hoặc macro)!",
+    importReadErrorAlert: "Lỗi đọc file JSON! Hãy kiểm tra lại định dạng file.",
+    computeSystemNoSolution: "\\text{Hệ vô nghiệm hoặc số liệu không hợp lệ}",
+    computeNotSupported: "\\text{Phiên bản thư viện chưa hỗ trợ hàm này}",
+    computeSolveNotSupported: "\\text{Chưa hỗ trợ giải phương trình này hoặc vô nghiệm}",
+    computeError: "Lỗi: Không thể tính toán biểu thức này."
+  },
+  en: {
+    webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
+    mathLiveLabel: "Math Live:",
+    latexLabel: "LaTeX:",
+    importDict: "Import Dict",
+    exportDict: "Export Dict",
+    editDict: "Edit Dict",
+    saveToDict: "Save to Dict",
+    modeLabel: "Mode:",
+    eEditorOnly: "E-Editor (Only)",
+    eEditor: "E-Editor",
+    office: "Office",
+    officeMathWarning: "⚠️ Office Math is not supported. Insert E-Editor type only.",
+    insertBtn: "Insert / Update",
+    computeLabel: "Compute:",
+    evaluate: "Evaluate",
+    simplify: "Simplify",
+    expand: "Expand",
+    expandAll: "Expand All",
+    factor: "Factor",
+    solve: "Solve",
+    resultLabel: "Result:",
+    insertToWord: "Insert into Word",
+    previewVertical: "Preview Vertical Math:",
+    addDictTitle: "Add to Dictionary",
+    addDictSubText: "This equation will be saved for quick typing next time.",
+    inlineOpt: "Inline (Auto-convert while typing)",
+    macroOpt: "Macro (Type with '\\' prefix for suggestions)",
+    shortcutLabel: "Shortcut key (no '\\' prefix)",
+    shortcutPlaceholder: "e.g., ptb, hpt...",
+    saveBtn: "Save",
+    cancelBtn: "Cancel",
+    manageDictTitle: "Dictionary Manager",
+    searchPlaceholder: "Search shortcut or LaTeX...",
+    inlineHeader: "Inline Shortcuts",
+    macroHeader: "Macro Commands (\\)",
+    deleteTitle: "Delete this shortcut",
+    showingResults: "* Showing 10 / {0} results. Type more keywords to refine search.",
+    emptyDict: "Dictionary is empty.",
+    saveChanges: "Save Changes",
+    enterShortcutAlert: "Please enter a shortcut key!",
+    importSuccessAlert: "Dictionary imported successfully! Your old shortcuts are kept.",
+    importStructErrorAlert: "Invalid JSON structure for dictionary!",
+    importReadErrorAlert: "Error reading JSON file! Please check the file format.",
+    computeSystemNoSolution: "\\text{No solution or invalid data}",
+    computeNotSupported: "\\text{Library version does not support this function}",
+    computeSolveNotSupported: "\\text{Equation type not supported or no solution}",
+    computeError: "Error: Cannot compute this expression."
+  }
+};
+
 export default function App() {
   const isOnline = Office.context.platform === Office.PlatformType.OfficeOnline;
 
@@ -45,7 +151,19 @@ export default function App() {
   // --- BẮT ĐẦU: STATE VÀ LOGIC CHO COMPUTE ENGINE ---
   const [computeResult, setComputeResult] = useState<string>("");
 
-  const handleCompute = (action: "evaluate" | "simplify" | "expand" | "expandAll"| "factor" | "solve") => {
+  const defaultInlineRef = useRef<any>(null);
+  const defaultMacrosRef = useRef<any>(null);
+
+  const [statusMessage, setStatusMessage] = useState<{ text: string, type: MessageBarType } | null>(null);
+
+  const [language, setLanguage] = useState<Language>(() => {
+    // Đọc từ localStorage, nếu chưa có thì mặc định là 'vi'
+    return (localStorage.getItem("math_user_lang") as Language) || "vi";
+  });
+
+  const t = uiText[language]; // Biến 't' này sẽ dùng để gọi chữ ra UI
+
+  const handleCompute = (action: "evaluate" | "simplify" | "expand" | "expandAll" | "factor" | "solve") => {
     if (!currentLatex) return;
 
     try {
@@ -68,7 +186,7 @@ export default function App() {
         case "factor": // Phân tích nhân tử (vd: x^2 - 1 = (x-1)(x+1))
           resultLatex = ce.expr(["Factor", expr]).evaluate().latex;
           break;
-        case "solve": 
+        case "solve":
           // 1. Tự động tìm các ẩn số có trong biểu thức (VD: x, y, z...)
           let vars: string[] = [];
           if (expr.unknowns && expr.unknowns.length > 0) {
@@ -83,36 +201,36 @@ export default function App() {
 
           // 2. Phân loại: Hệ phương trình vs Phương trình 1 ẩn
           if (vars.length > 1) {
-             // ---> GIẢI HỆ PHƯƠNG TRÌNH NHIỀU ẨN <---
-             // Với hệ, hàm expr.solve() tích hợp sẵn sẽ trả về đối tượng { x: ..., y: ... }
-             if (typeof expr.solve === "function") {
-                const solution = expr.solve(vars) as Record<string, any>;
-                
-                if (solution && typeof solution === "object" && !Array.isArray(solution) && Object.keys(solution).length > 0) {
-                   // Dựng lại mã LaTeX hệ phương trình kết quả
-                   let casesContent = vars.map(v => {
-                      return solution[v] ? `${v} = ${solution[v].latex}` : "";
-                   }).filter(Boolean).join(" \\\\ "); // Nối các dòng bằng xuống dòng (\\)
-                   
-                   resultLatex = `\\displaystyle \\begin{cases} ${casesContent} \\end{cases}`;
-                } else {
-                   resultLatex = "\\text{Hệ vô nghiệm hoặc số liệu không hợp lệ}";
-                }
-             } else {
-                resultLatex = "\\text{Phiên bản thư viện chưa hỗ trợ hàm này}";
-             }
+            // ---> GIẢI HỆ PHƯƠNG TRÌNH NHIỀU ẨN <---
+            // Với hệ, hàm expr.solve() tích hợp sẵn sẽ trả về đối tượng { x: ..., y: ... }
+            if (typeof expr.solve === "function") {
+              const solution = expr.solve(vars) as Record<string, any>;
+
+              if (solution && typeof solution === "object" && !Array.isArray(solution) && Object.keys(solution).length > 0) {
+                // Dựng lại mã LaTeX hệ phương trình kết quả
+                let casesContent = vars.map(v => {
+                  return solution[v] ? `${v} = ${solution[v].latex}` : "";
+                }).filter(Boolean).join(" \\\\ "); // Nối các dòng bằng xuống dòng (\\)
+
+                resultLatex = `\\displaystyle \\begin{cases} ${casesContent} \\end{cases}`;
+              } else {
+                resultLatex = t.computeSystemNoSolution; // "Hệ vô nghiệm hoặc số liệu không hợp lệ"
+              }
+            } else {
+              resultLatex = t.computeNotSupported; // "Phiên bản thư viện chưa hỗ trợ hàm này"
+            }
           } else {
-             // ---> GIẢI PHƯƠNG TRÌNH 1 ẨN (Giữ nguyên code cũ đang chạy tốt) <---
-             const v = vars[0];
-             const solveResult = ce.expr(["Solve", expr, v]).evaluate();
-             
-             if (solveResult && solveResult.latex.includes("Solve")) {
-               resultLatex = "\\text{Chưa hỗ trợ giải phương trình này hoặc vô nghiệm}";
-             } else {
-               resultLatex = `${v} \\in \\{` + solveResult.latex + "\\}";
-               // Dọn dẹp dấu ngoặc nhọn bị lặp
-               resultLatex = resultLatex.replace(/\\\{\\\{/g, "\\{").replace(/\\\}\\\}/g, "\\}");
-             }
+            // ---> GIẢI PHƯƠNG TRÌNH 1 ẨN (Giữ nguyên code cũ đang chạy tốt) <---
+            const v = vars[0];
+            const solveResult = ce.expr(["Solve", expr, v]).evaluate();
+
+            if (solveResult && solveResult.latex.includes("Solve")) {
+              resultLatex = t.computeSolveNotSupported;
+            } else {
+              resultLatex = `${v} \\in \\{` + solveResult.latex + "\\}";
+              // Dọn dẹp dấu ngoặc nhọn bị lặp
+              resultLatex = resultLatex.replace(/\\\{\\\{/g, "\\{").replace(/\\\}\\\}/g, "\\}");
+            }
           }
           break;
       }
@@ -120,7 +238,7 @@ export default function App() {
       setComputeResult(resultLatex);
     } catch (error) {
       console.error("Lỗi Compute Engine:", error);
-      setComputeResult("Lỗi: Không thể tính toán biểu thức này.");
+      setComputeResult("t.computeError"); //Lỗi không thể tính toán biểu thức này
     }
   };
 
@@ -195,7 +313,7 @@ export default function App() {
         cc.load("title, tag");
         const ccs = range.contentControls;
         ccs.load("items/title, items/tag");
-        
+
         // Tải Thuộc tính ẢNH để dự phòng khi Copy/Paste làm mất Khung
         const pics = range.inlinePictures;
         pics.load("items/altTextDescription");
@@ -212,7 +330,7 @@ export default function App() {
         } else if (!cc.isNullObject && cc.title === "LSTS_Math") {
           newFullTag = cc.tag;
           newTargetCC = cc;
-        } 
+        }
         // ƯU TIÊN 2: Trích xuất ID từ Smart Alt Text của Ảnh
         else if (pics.items.length > 0 && pics.items[0].altTextDescription && pics.items[0].altTextDescription.includes("#[ID:")) {
           const desc = pics.items[0].altTextDescription;
@@ -248,7 +366,7 @@ export default function App() {
             let isOldEmptied = false;
             if (oldEqType === "SVG") {
               if (oldPics.items.length === 0) isOldEmptied = true;
-            } else { 
+            } else {
               if (rawText === "" || isPlaceholder) isOldEmptied = true;
             }
 
@@ -261,25 +379,25 @@ export default function App() {
 
         // --- BƯỚC 2: TẢI CÔNG THỨC LÊN MATHLIVE ---
         if (newFullTag) {
-          lastEqIdRef.current = newFullTag; 
+          lastEqIdRef.current = newFullTag;
           let isEmptied = false;
-          
-          if (newTargetCC) {
-             const ccRange = newTargetCC.getRange();
-             const ccPics = ccRange.inlinePictures;
-             ccPics.load("items");
-             ccRange.load("text");
-             await context.sync();
 
-             const rawText = ccRange.text;
-             const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-             const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
-             
-             if (newEqType === "SVG") {
-               isEmptied = ccPics.items.length === 0;
-             } else {
-               isEmptied = rawText === "" || isPlaceholder;
-             }
+          if (newTargetCC) {
+            const ccRange = newTargetCC.getRange();
+            const ccPics = ccRange.inlinePictures;
+            ccPics.load("items");
+            ccRange.load("text");
+            await context.sync();
+
+            const rawText = ccRange.text;
+            const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+
+            if (newEqType === "SVG") {
+              isEmptied = ccPics.items.length === 0;
+            } else {
+              isEmptied = rawText === "" || isPlaceholder;
+            }
           }
 
           if (isEmptied && newTargetCC) {
@@ -287,7 +405,7 @@ export default function App() {
             if (mathfieldRef.current) mathfieldRef.current.value = "";
             setCurrentLatex("");
             lastEqIdRef.current = "";
-            newTargetCC.delete(false); 
+            newTargetCC.delete(false);
             await context.sync();
           } else {
             // TẢI DỮ LIỆU TỪ DATABASE
@@ -307,121 +425,121 @@ export default function App() {
       console.error("Lỗi đọc công thức:", error);
     }
   }, []);
-/*
-  const handleReadEquation = useCallback(async () => {
-    try {
-      await Word.run(async (context) => {
-        const range = context.document.getSelection();
-        const cc = range.parentContentControlOrNullObject;
-        cc.load("title, tag");
-        const ccs = range.contentControls;
-        ccs.load("items/title, items/tag");
-        await context.sync();
-
-        let newFullTag = "";
-        let newTargetCC: Word.ContentControl | null = null;
-
-        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
-          newFullTag = ccs.items[0].tag;
-          newTargetCC = ccs.items[0];
-        } else if (!cc.isNullObject && cc.title === "LSTS_Math") {
-          newFullTag = cc.tag;
-          newTargetCC = cc;
-        }
-
-        const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
-        const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
-
-        if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
-          const oldEqId = lastEqIdRef.current.split("|")[0];
-          const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
-          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
-          oldControls.load("items");
+  /*
+    const handleReadEquation = useCallback(async () => {
+      try {
+        await Word.run(async (context) => {
+          const range = context.document.getSelection();
+          const cc = range.parentContentControlOrNullObject;
+          cc.load("title, tag");
+          const ccs = range.contentControls;
+          ccs.load("items/title, items/tag");
           await context.sync();
-
-          let isOldDeleted = false;
-          if (oldControls.items.length === 0) {
-            isOldDeleted = true;
-          } else {
-            const oldCC = oldControls.items[0];
-            const oldRange = oldCC.getRange();
-            const oldPics = oldRange.inlinePictures;
-            oldPics.load("items");
-            oldRange.load("text");
+  
+          let newFullTag = "";
+          let newTargetCC: Word.ContentControl | null = null;
+  
+          if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
+            newFullTag = ccs.items[0].tag;
+            newTargetCC = ccs.items[0];
+          } else if (!cc.isNullObject && cc.title === "LSTS_Math") {
+            newFullTag = cc.tag;
+            newTargetCC = cc;
+          }
+  
+          const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
+          const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
+  
+          if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
+            const oldEqId = lastEqIdRef.current.split("|")[0];
+            const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
+            const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
+            oldControls.load("items");
             await context.sync();
-
-            const rawText = oldRange.text;
-            if (oldEqType === "SVG") {
-              if (oldPics.items.length === 0) {
-                isOldDeleted = true;
-              }
+  
+            let isOldDeleted = false;
+            if (oldControls.items.length === 0) {
+              isOldDeleted = true;
             } else {
-              if (rawText === "") {
-                isOldDeleted = true;
+              const oldCC = oldControls.items[0];
+              const oldRange = oldCC.getRange();
+              const oldPics = oldRange.inlinePictures;
+              oldPics.load("items");
+              oldRange.load("text");
+              await context.sync();
+  
+              const rawText = oldRange.text;
+              if (oldEqType === "SVG") {
+                if (oldPics.items.length === 0) {
+                  isOldDeleted = true;
+                }
+              } else {
+                if (rawText === "") {
+                  isOldDeleted = true;
+                }
+              }
+  
+              if (isOldDeleted) {
+                oldCC.delete(false);
+                await context.sync();
               }
             }
-
+  
             if (isOldDeleted) {
-              oldCC.delete(false);
-              await context.sync();
+              //Office.context.document.settings.remove(oldEqId);
+              //Office.context.document.settings.saveAsync();
+              if (!newFullTag) {
+                if (mathfieldRef.current) mathfieldRef.current.value = "";
+                setCurrentLatex("");
+              }
             }
           }
-
-          if (isOldDeleted) {
-            //Office.context.document.settings.remove(oldEqId);
-            //Office.context.document.settings.saveAsync();
-            if (!newFullTag) {
+  
+          if (newFullTag && newTargetCC) {
+            lastEqIdRef.current = newFullTag;
+            const ccRange = newTargetCC.getRange();
+            const pics = ccRange.inlinePictures;
+            pics.load("items");
+            ccRange.load("text");
+            await context.sync();
+  
+            const rawText = ccRange.text;
+            const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
+  
+            let isEmptied = false;
+            if (newEqType === "SVG") {
+              isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
+            } else {
+              isEmptied = isPlaceholder || rawText === "";
+            }
+  
+            if (isEmptied) {
               if (mathfieldRef.current) mathfieldRef.current.value = "";
               setCurrentLatex("");
-            }
-          }
-        }
-
-        if (newFullTag && newTargetCC) {
-          lastEqIdRef.current = newFullTag;
-          const ccRange = newTargetCC.getRange();
-          const pics = ccRange.inlinePictures;
-          pics.load("items");
-          ccRange.load("text");
-          await context.sync();
-
-          const rawText = ccRange.text;
-          const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-          const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
-
-          let isEmptied = false;
-          if (newEqType === "SVG") {
-            isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
-          } else {
-            isEmptied = isPlaceholder || rawText === "";
-          }
-
-          if (isEmptied) {
-            if (mathfieldRef.current) mathfieldRef.current.value = "";
-            setCurrentLatex("");
-            lastEqIdRef.current = "";
-            newTargetCC.delete(false);
-            //Office.context.document.settings.remove(newEqId);
-            //Office.context.document.settings.saveAsync();
-            await context.sync();
-          } else {
-            const latexCode = Office.context.document.settings.get(newEqId);
-            if (latexCode && mathfieldRef.current) {
-              if (mathfieldRef.current.value !== latexCode) {
-                mathfieldRef.current.value = latexCode;
-                setCurrentLatex(latexCode);
+              lastEqIdRef.current = "";
+              newTargetCC.delete(false);
+              //Office.context.document.settings.remove(newEqId);
+              //Office.context.document.settings.saveAsync();
+              await context.sync();
+            } else {
+              const latexCode = Office.context.document.settings.get(newEqId);
+              if (latexCode && mathfieldRef.current) {
+                if (mathfieldRef.current.value !== latexCode) {
+                  mathfieldRef.current.value = latexCode;
+                  setCurrentLatex(latexCode);
+                }
               }
             }
+          } else {
+            lastEqIdRef.current = "";
           }
-        } else {
-          lastEqIdRef.current = "";
-        }
-      });
-    } catch (error) {
-      // Bỏ qua lỗi ngầm
-    }
-  }, []);
-*/
+        });
+      } catch (error) {
+        // Bỏ qua lỗi ngầm
+      }
+    }, []);
+  */
   const handleInsertEquation = async () => {
     if (!mathfieldRef.current) return;
 
@@ -809,6 +927,7 @@ export default function App() {
       containerRef.current.appendChild(mf);
       mathfieldRef.current = mf;
 
+      /*
       mf.inlineShortcuts = {
         ...mf.inlineShortcuts,
         ...customInlineShortcuts,
@@ -820,6 +939,9 @@ export default function App() {
         ...upgradeMacros(customMacros),
         ...upgradeMacros(userDict.macro)
       };
+      */
+
+
 
       mf.addEventListener("input", () => {
         setCurrentLatex(mf.getValue("latex-expanded"));
@@ -843,6 +965,51 @@ export default function App() {
     };
   }, [handleReadEquation]);
 
+
+  // ==========================================
+  // THAY ĐỔI NGÔN NGỮ HOẶC DICT: XỬ LÝ MACRO
+  // ==========================================
+
+  useEffect(() => {
+    if (!mathfieldRef.current) return;
+
+    const mf = mathfieldRef.current;
+
+    // 1. Luôn bắt đầu từ bản gốc (để đảm bảo \frac, \sqrt... luôn tồn tại)
+    // MathLive hỗ trợ gán lại object mới để đè lên các thay đổi cũ
+    const baseInlines = { ...defaultInlineRef.current };
+    const baseMacros = { ...defaultMacrosRef.current };
+
+    // 2. Gom phím tắt người dùng tự thêm (Luôn luôn có)
+    const userInlines = { ...userDict.inline };
+    const userMacros = { ...upgradeMacros(userDict.macro) };
+
+    if (language === "vi") {
+      // TIẾNG VIỆT: Gộp bản gốc + Phím tắt người dùng + Phím tắt custom code
+      mf.inlineShortcuts = {
+        ...baseInlines,
+        ...customInlineShortcuts,
+        ...userInlines
+      };
+      mf.macros = {
+        ...baseMacros,
+        ...upgradeMacros(customMacros),
+        ...userMacros
+      };
+    } else {
+      // TIẾNG ANH: Gộp bản gốc + Phím tắt người dùng (KHÔNG gộp custom code)
+      mf.inlineShortcuts = {
+        ...baseInlines,
+        ...userInlines
+      };
+      mf.macros = {
+        ...baseMacros,
+        ...userMacros
+      };
+    }
+  }, [language, userDict]);
+
+
   const insertSymbol = (latexCode: string) => {
     if (mathfieldRef.current) {
       mathfieldRef.current.insert(latexCode);
@@ -852,7 +1019,8 @@ export default function App() {
 
   const handleSaveToDict = () => {
     if (!dictKey.trim()) {
-      alert("Vui lòng nhập phím tắt!");
+      //alert(t.enterShortcutAlert); //Vui lòng nhập phím tắt
+      setStatusMessage({ text: t.enterShortcutAlert, type: MessageBarType.warning });
       return;
     }
     const updatedDict = { ...userDict };
@@ -860,6 +1028,7 @@ export default function App() {
     setUserDict(updatedDict);
     localStorage.setItem("math_user_dict", JSON.stringify(updatedDict));
 
+    /*
     if (mathfieldRef.current) {
       if (dictType === "inline") {
         mathfieldRef.current.inlineShortcuts = { ...mathfieldRef.current.inlineShortcuts, ...updatedDict.inline };
@@ -867,6 +1036,7 @@ export default function App() {
         mathfieldRef.current.macros = { ...mathfieldRef.current.macros, ...upgradeMacros(updatedDict.macro) };
       }
     }
+      */
     setIsAddDictOpen(false);
     setDictKey("");
   };
@@ -896,17 +1066,23 @@ export default function App() {
           };
           setUserDict(mergedDict);
           localStorage.setItem("math_user_dict", JSON.stringify(mergedDict));
-
+          /*
           if (mathfieldRef.current) {
             mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...mergedDict.inline };
             mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(mergedDict.macro) };
           }
-          alert("Nhập từ điển thành công! Các phím tắt cũ của bạn vẫn được giữ nguyên an toàn.");
+            */
+          setTimeout(() => {
+            //alert(t.importSuccessAlert);
+            setStatusMessage({ text: t.importSuccessAlert, type: MessageBarType.success });
+          }, 100);
         } else {
-          alert("Cấu trúc file JSON không đúng chuẩn từ điển!");
+          //alert(t.importStructErrorAlert);
+          setStatusMessage({ text: t.importStructErrorAlert, type: MessageBarType.error });
         }
       } catch (error) {
-        alert("Lỗi đọc file JSON! Hãy kiểm tra lại định dạng file.");
+        //alert(t.importReadErrorAlert);
+        setStatusMessage({ text: t.importReadErrorAlert, type: MessageBarType.error });
       }
     };
     reader.readAsText(file);
@@ -949,61 +1125,80 @@ export default function App() {
 
     setUserDict(newDict);
     localStorage.setItem("math_user_dict", JSON.stringify(newDict));
-
+    /*
     if (mathfieldRef.current) {
       mathfieldRef.current.inlineShortcuts = { ...customInlineShortcuts, ...newDict.inline };
       mathfieldRef.current.macros = { ...upgradeMacros(customMacros), ...upgradeMacros(newDict.macro) };
     }
+      */
     setIsEditDictOpen(false);
   };
 
   return (
     <ThemeProvider theme={officeGreenTheme}>
       <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8", overflowY: "auto" }}>
+        <Toggle
+          onText="Tiếng Việt"
+          offText="English"
+          checked={language === 'vi'}
+          onChange={(_, checked) => {
+            const newLang = checked ? 'vi' : 'en';
+            setLanguage(newLang);
+            localStorage.setItem("math_user_lang", newLang); // Lưu lại
+          }}
+        />
         <Stack tokens={{ childrenGap: 12 }}>
           {isOnline && (
             <MessageBar messageBarType={MessageBarType.blocked} isMultiline={true}>
-              <strong>Phiên bản Web không được hỗ trợ chèn vào Word!</strong><br />
-              Để chèn công thức, vui lòng nhấn nút <b>"Mở trong ứng dụng trên máy tính"</b> (Open in Desktop App) trên thanh công cụ của Word.
+              <span style={{ whiteSpace: "pre-line" }}>{t.webWarning}</span>
+            </MessageBar>
+          )}
+          {statusMessage && (
+            <MessageBar
+              messageBarType={statusMessage.type}
+              onDismiss={() => setStatusMessage(null)}
+              isMultiline={false}
+            >
+              {statusMessage.text}
             </MessageBar>
           )}
 
           <div style={{ height: "145px" }}>
-            <MathPalette onInsert={insertSymbol} />
+            <MathPalette onInsert={insertSymbol} language={language} />
           </div>
 
-          <Label style={{ fontSize: "14px", fontWeight: "600" }}>Math Live:</Label>
+          <Label style={{ fontSize: "14px", fontWeight: "600" }}>{t.mathLiveLabel}</Label>
           <div ref={containerRef} id="mathfield-container" />
 
           <div style={{ background: "#e1dfdd", padding: "8px", borderRadius: "4px" }}>
             <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "4px" }}>
-              <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>LaTeX:</Label>
+              <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>{t.latexLabel}</Label>
 
               <Stack horizontal tokens={{ childrenGap: 6 }} verticalAlign="center">
                 <input type="file" accept=".json" ref={fileInputRef} style={{ display: "none" }} onChange={handleImportDict} />
 
                 <DefaultButton
                   iconProps={{ iconName: 'Upload' }}
-                  title="Import Dictionary"
+                  title={t.importDict}
                   onClick={() => fileInputRef.current?.click()}
                   styles={{ root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, icon: { fontSize: 12 } }}
                 />
                 <DefaultButton
                   iconProps={{ iconName: 'Download' }}
-                  title="Export Dictionary"
+                  title={t.exportDict}
                   onClick={handleExportDict}
                   styles={{ root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, icon: { fontSize: 12 } }}
                 />
                 <DefaultButton
                   iconProps={{ iconName: 'Edit' }}
-                  title="Edit Dictionary"
+                  title={t.editDict}
                   onClick={handleOpenEditDict}
                   styles={{ root: { height: 24, fontSize: 12, padding: "0 0px", borderRadius: "6px", minWidth: 30 }, icon: { fontSize: 12 } }}
                 />
                 <DefaultButton
                   iconProps={{ iconName: 'Save' }}
                   text="Save to Dict"
-                  title="Save to Dictionary"
+                  title={t.saveToDict}
                   onClick={() => setIsAddDictOpen(true)}
                   disabled={!currentLatex}
                   styles={{
@@ -1042,10 +1237,10 @@ export default function App() {
           >
             <Stack tokens={{ childrenGap: 4 }} style={{ flexGrow: 1 }}>
               <Toggle
-                label="Mode:"
+                label={t.modeLabel}
                 inlineLabel
-                onText={isUnsupported ? "E-Editor (Only)" : "E-Editor"}
-                offText="Office"
+                onText={isUnsupported ? t.eEditorOnly : t.eEditor}
+                offText={t.office}
                 checked={insertMode === "svg"}
                 onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
                 disabled={isUnsupported}
@@ -1054,14 +1249,14 @@ export default function App() {
 
               {isUnsupported && (
                 <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>
-                  ⚠️ Office Math is not supported. Insert E-Editor type only.
+                  {t.officeMathWarning}
                 </Label>
               )}
             </Stack>
 
             <DefaultButton
               primary
-              text="Insert"
+              text={t.insertBtn}
               onClick={handleInsertEquation}
               style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }}
               title="Insert new equation or update selected equation"
@@ -1072,25 +1267,25 @@ export default function App() {
           {/* KHU VỰC TÍNH TOÁN BẰNG COMPUTE ENGINE      */}
           {/* ========================================== */}
           <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd" }}>
-            <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", padding: 0 }}>Compute:</Label>
+            <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", padding: 0 }}>{t.computeLabel}</Label>
 
             <Stack horizontal wrap tokens={{ childrenGap: 8 }} style={{ marginBottom: "0px", marginTop: "8px" }}>
-              <DefaultButton iconProps={{ iconName: 'Calculator' }} text="Evaluate" onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Broom' }} text="Simplify" onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'ExploreContent' }} text="Expand" onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'MiniExpand' }} text="ExpandAll" onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Merge' }} text="Factor" onClick={() => handleCompute("factor")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }}/>
-              <DefaultButton 
-                 iconProps={{ iconName: 'Variable' }} 
-                 text="Solve" 
-                 onClick={() => handleCompute("solve")} 
-                 style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }}
+              <DefaultButton iconProps={{ iconName: 'Calculator' }} text={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Broom' }} text={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'ExploreContent' }} text={t.expand} onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'MiniExpand' }} text={t.expandAll} onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Merge' }} text={t.factor} onClick={() => handleCompute("factor")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton
+                iconProps={{ iconName: 'Variable' }}
+                text={t.solve}
+                onClick={() => handleCompute("solve")}
+                style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }}
               />
             </Stack>
 
             {computeResult && (
               <Stack tokens={{ childrenGap: 8 }} style={{ marginTop: "16px", borderTop: "1px dashed #c8c6c4", paddingTop: "12px" }}>
-                <Label style={{ color: "#605e5c", margin: 0 }}>Result:</Label>
+                <Label style={{ color: "#605e5c", margin: 0 }}>{t.resultLabel}</Label>
 
                 {/* Dùng thẻ math-field chỉ đọc để render công thức kết quả đẹp mắt */}
                 <div style={{ padding: "10px", backgroundColor: "white", borderRadius: "4px", fontSize: "22px", minHeight: "50px" }}>
@@ -1100,7 +1295,7 @@ export default function App() {
                 </div>
 
                 <PrimaryButton
-                  text="Insert into Word"
+                  text={t.insertToWord}
                   iconProps={{ iconName: 'Add' }}
                   onClick={handleInsertComputeResult}
                   style={{ backgroundColor: "#0078d4", borderColor: "transparent", color: "white", width: "fit-content", marginTop: "10px", borderRadius: "6px" }}
@@ -1116,7 +1311,7 @@ export default function App() {
               border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center"
             }}>
               <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>
-                Preview Vertical Math:
+                {t.previewVertical}
               </Label>
 
               {/* Khung hiển thị SVG */}
@@ -1129,7 +1324,7 @@ export default function App() {
               />
 
               <PrimaryButton
-                text="Insert into Word"
+                text={t.insertToWord}
                 iconProps={{ iconName: "CalculatorAddition" }}
                 onClick={handleInsertVerticalMath}
                 style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }}
@@ -1139,17 +1334,17 @@ export default function App() {
 
 
 
-          <Dialog hidden={!isAddDictOpen} onDismiss={() => setIsAddDictOpen(false)} dialogContentProps={{ type: DialogType.normal, title: 'Thêm vào từ điển', subText: 'Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.' }}>
-            <ChoiceGroup options={[{ key: 'inline', text: 'Inline (Tự động chuyển đổi khi gõ)' }, { key: 'macro', text: 'Macro (Gõ kèm dấu \\ phía trước để gợi ý)' }]} selectedKey={dictType} onChange={(_, option) => setDictType(option?.key as "inline" | "macro")} />
-            <TextField label="Shortcut key (không gõ '\' ở trước)" placeholder="VD: ptb, hpt..." value={dictKey} onChange={(_, val) => setDictKey(val || "")} styles={{ root: { marginTop: 10 }, fieldGroup: { height: 40 }, field: { fontSize: "15px", padding: "8px" } }} />
+          <Dialog hidden={!isAddDictOpen} onDismiss={() => setIsAddDictOpen(false)} dialogContentProps={{ type: DialogType.normal, title: t.addDictTitle, subText: t.addDictSubText }}>
+            <ChoiceGroup options={[{ key: 'inline', text: t.inlineOpt }, { key: 'macro', text: t.macroOpt }]} selectedKey={dictType} onChange={(_, option) => setDictType(option?.key as "inline" | "macro")} />
+            <TextField label={t.shortcutLabel} placeholder={t.shortcutPlaceholder} value={dictKey} onChange={(_, val) => setDictKey(val || "")} styles={{ root: { marginTop: 10 }, fieldGroup: { height: 40 }, field: { fontSize: "15px", padding: "8px" } }} />
             <DialogFooter>
-              <PrimaryButton onClick={handleSaveToDict} text="Save" />
-              <DefaultButton onClick={() => setIsAddDictOpen(false)} text="Cancel" />
+              <PrimaryButton onClick={handleSaveToDict} text={t.saveBtn} />
+              <DefaultButton onClick={() => setIsAddDictOpen(false)} text={t.cancelBtn} />
             </DialogFooter>
           </Dialog>
 
-          <Panel isOpen={isEditDictOpen} onDismiss={() => setIsEditDictOpen(false)} type={PanelType.medium} headerText="Quản lý Từ điển" closeButtonAriaLabel="Đóng">
-            <SearchBox placeholder="Tìm phím tắt hoặc mã LaTeX..." value={searchTerm} onChange={(_, newValue) => setSearchTerm(newValue || "")} styles={{ root: { marginBottom: "16px", marginTop: "10px" } }} />
+          <Panel isOpen={isEditDictOpen} onDismiss={() => setIsEditDictOpen(false)} type={PanelType.medium} headerText={t.manageDictTitle} closeButtonAriaLabel="Close">
+            <SearchBox placeholder={t.searchPlaceholder} value={searchTerm} onChange={(_, newValue) => setSearchTerm(newValue || "")} styles={{ root: { marginBottom: "16px", marginTop: "10px" } }} />
             <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "8px", overflowX: "hidden" }}>
               {["inline", "macro"].map((type) => {
                 const filteredItems = editItems.filter(item => item.type === type && (item.key.toLowerCase().includes(searchTerm.toLowerCase()) || item.value.toLowerCase().includes(searchTerm.toLowerCase())));
@@ -1157,23 +1352,23 @@ export default function App() {
                 const displayItems = filteredItems.slice(0, 10);
                 return (
                   <div key={type} style={{ marginBottom: "20px" }}>
-                    <Label style={{ color: "#107c41", borderBottom: "1px solid #c8c6c4", paddingBottom: "4px", marginBottom: "8px" }}> {type === "inline" ? "Phím tắt gõ nhanh (Inline)" : "Lệnh Macro (\\)"} </Label>
+                    <Label style={{ color: "#107c41", borderBottom: "1px solid #c8c6c4", paddingBottom: "4px", marginBottom: "8px" }}> {type === "inline" ? t.inlineHeader : t.macroHeader} </Label>
                     {displayItems.map((item) => (
                       <Stack horizontal verticalAlign="start" tokens={{ childrenGap: 8 }} key={item.id} style={{ marginBottom: "12px" }}>
-                        <TextField value={item.key} placeholder="Mã lệnh..." onChange={(_, val) => handleItemChange(item.id, "key", val || "")} styles={{ root: { width: "100px" }, field: { fontWeight: "bold" } }} />
+                        <TextField value={item.key} placeholder="Code..." onChange={(_, val) => handleItemChange(item.id, "key", val || "")} styles={{ root: { width: "100px" }, field: { fontWeight: "bold" } }} />
                         <TextField multiline autoAdjustHeight value={item.value} onChange={(_, val) => handleItemChange(item.id, "value", val || "")} styles={{ root: { flexGrow: 1 }, field: { fontFamily: "Consolas, monospace", fontSize: "13px" } }} />
-                        <IconButton iconProps={{ iconName: 'Delete' }} title="Xóa phím tắt này" onClick={() => handleItemDelete(item.id)} styles={{ root: { color: "#d13438" }, rootHovered: { backgroundColor: "#fde7e9" } }} />
+                        <IconButton iconProps={{ iconName: 'Delete' }} title={t.deleteTitle} onClick={() => handleItemDelete(item.id)} styles={{ root: { color: "#d13438" }, rootHovered: { backgroundColor: "#fde7e9" } }} />
                       </Stack>
                     ))}
-                    {filteredItems.length > 10 && (<Label style={{ fontStyle: "italic", color: "#d13438", fontSize: "12px", marginTop: "4px" }}> * Đang hiển thị 10 / {filteredItems.length} kết quả. Hãy nhập thêm từ khóa để tìm chính xác hơn. </Label>)}
+                    {filteredItems.length > 10 && (<Label style={{ fontStyle: "italic", color: "#d13438", fontSize: "12px", marginTop: "4px" }}> {t.showingResults.replace("{0}", filteredItems.length.toString())} </Label>)}
                   </div>
                 );
               })}
-              {editItems.length === 0 && (<Label style={{ fontStyle: "italic", color: "#a19f9d" }}>Từ điển đang trống.</Label>)}
+              {editItems.length === 0 && (<Label style={{ fontStyle: "italic", color: "#a19f9d" }}>{t.emptyDict}</Label>)}
             </div>
             <Stack horizontal tokens={{ childrenGap: 10 }} style={{ marginTop: "20px" }}>
-              <PrimaryButton iconProps={{ iconName: 'Save' }} text="Lưu thay đổi" onClick={handleSaveEditedDict} />
-              <DefaultButton text="Hủy" onClick={() => setIsEditDictOpen(false)} />
+              <PrimaryButton iconProps={{ iconName: 'Save' }} text={t.saveChanges} onClick={handleSaveEditedDict} />
+              <DefaultButton text={t.cancelBtn} onClick={() => setIsEditDictOpen(false)} />
             </Stack>
           </Panel>
 
