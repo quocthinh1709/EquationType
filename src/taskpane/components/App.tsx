@@ -1053,6 +1053,9 @@ export default function App() {
   // ==========================================
   // TÍNH NĂNG MỚI: PREVIEW BẢNG BIẾN THIÊN (DẠNG SVG CHUẨN, NGHIỆM CHÍNH XÁC)
   // ==========================================
+  // ==========================================
+  // TÍNH NĂNG MỚI: PREVIEW BẢNG BIẾN THIÊN (HỖ TRỢ HÀM PHÂN THỨC, TIỆM CẬN ĐỨNG)
+  // ==========================================
   const variationTablePreview = useMemo(() => {
     if (!currentLatex) return null;
     const latex = currentLatex.trim();
@@ -1061,155 +1064,215 @@ export default function App() {
     try {
       const rhs = latex.substring(latex.indexOf("=") + 1).trim();
       const expr = ce.parse(rhs);
-      
-      // 1. Tính đạo hàm y' (Ép Expand để tránh lỗi phương trình chưa rút gọn)
-      const deriv = ce.expr(["Derivative", expr, "x"]).evaluate().simplify();
-      console.log("Đạo hàm y':", deriv.toString(), "latex:", deriv.latex);
-      // 2. Tìm nghiệm y' = 0
-      const solveRes = ce.expr(["Solve", ["Equal", deriv, 0], "x"]).evaluate();
-      console.log("Nghiệm y' = 0:", solveRes.toString(), "latex:", solveRes.latex);
 
-      let rawRoots: number[] = [];
-      
-      // HÀM MỚI: Quét đệ quy sâu vào mọi ngóc ngách của kết quả để tìm số
-      const extractRootsRecursively = (node: any) => {
+      // 1. HÀM QUÉT NGHIỆM ĐỆ QUY (Tìm sâu các giá trị số trong MathJSON)
+      const extractRootsRecursively = (node: any, targetArray: number[]) => {
           if (!node) return;
-          if (typeof node === 'number') { rawRoots.push(node); return; }
-          if (typeof node.numericValue === 'number') { rawRoots.push(node.numericValue); return; }
-          if (typeof node.value === 'number') { rawRoots.push(node.value); return; }
+          if (typeof node === 'number') { targetArray.push(node); return; }
+          if (typeof node.numericValue === 'number') { targetArray.push(node.numericValue); return; }
+          if (typeof node.value === 'number') { targetArray.push(node.value); return; }
           
           if (node.head === "Equal" && node.ops && node.ops.length === 2) {
-              extractRootsRecursively(node.ops[1]);
+              extractRootsRecursively(node.ops[1], targetArray);
               return;
           }
           if (node.ops && Array.isArray(node.ops)) {
-              node.ops.forEach((op: any) => extractRootsRecursively(op));
+              node.ops.forEach((op: any) => extractRootsRecursively(op, targetArray));
           }
       };
-      
-      extractRootsRecursively(solveRes);
 
-      // Lọc trùng và sắp xếp nghiệm
-      rawRoots.sort((a, b) => a - b);
-      let uniquePoints: number[] = [];
-      for(let i=0; i<rawRoots.length; i++) {
-          if (i > 0 && Math.abs(rawRoots[i] - rawRoots[i-1]) < 1e-6) continue;
-          uniquePoints.push(rawRoots[i]);
+      // 2. TÌM ĐIỂM GIÁN ĐOẠN (MẪU SỐ BẰNG 0) DÀNH CHO HÀM PHÂN THỨC
+      let rawDiscontinuities: number[] = [];
+      const fracRegex = /\\frac\{([^}]+)\}\{([^}]+)\}/g;
+      let match;
+      while ((match = fracRegex.exec(rhs)) !== null) {
+          const denomStr = match[2];
+          const denomExpr = ce.parse(denomStr);
+          // Tìm nghiệm của mẫu số
+          const solveDenom = ce.expr(["Solve", ["Equal", denomExpr, 0], "x"]).evaluate();
+          extractRootsRecursively(solveDenom, rawDiscontinuities);
       }
 
-      // Hàm ép tính toán ra số thực
+      // 3. TÍNH ĐẠO HÀM Y' VÀ TÌM CỰC TRỊ Y' = 0
+      const deriv = ce.expr(["Derivative", expr, "x"]).evaluate().simplify();
+      const solveRes = ce.expr(["Solve", ["Equal", deriv, 0], "x"]).evaluate();
+      
+      let rawRoots: number[] = [];
+      extractRootsRecursively(solveRes, rawRoots);
+
+      // 4. GỘP NGHIỆM VÀ ĐIỂM GIÁN ĐOẠN, LỌC TRÙNG VÀ SẮP XẾP TĂNG DẦN
+      let allPoints = [...rawRoots, ...rawDiscontinuities].sort((a, b) => a - b);
+      let uniquePoints: { val: number, isDis: boolean }[] = [];
+      for(let i=0; i<allPoints.length; i++) {
+          // Lọc các điểm sát nhau (khử sai số làm tròn)
+          if (i > 0 && Math.abs(allPoints[i] - allPoints[i-1]) < 1e-6) continue;
+          const val = allPoints[i];
+          // Kiểm tra xem điểm này có nằm trong danh sách làm mẫu số bằng 0 không
+          const isDis = rawDiscontinuities.some(d => Math.abs(d - val) < 1e-6);
+          uniquePoints.push({ val, isDis });
+      }
+
+      // Hàm ép tính toán kết quả ra số thực
       const getNum = (exprNode: any) => {
           const val = exprNode.evaluate();
           if (val.numericValue !== undefined && val.numericValue !== null) return val.numericValue;
           return parseFloat(val.toString());
       };
 
-      const getLimit = (xVal: number) => {
-         const res = getNum(expr.subs({ x: xVal }));
-         if (isNaN(res)) return "?";
-         if (res > 1e5 || !isFinite(res)) return (res > 0 || Object.is(res, Infinity)) ? "+\\infty" : "-\\infty";
-         if (res < -1e5) return "-\\infty";
-         return Math.round(res * 100) / 100;
-      };
-
+      // 5. XÉT DẤU Y' TỪNG KHOẢNG (Bằng cách lấy điểm thử Test Point)
       const signOfDerivAt = (xVal: number) => {
          const res = getNum(deriv.subs({ x: xVal }));
-         if (isNaN(res)) return "+"; 
+         if (isNaN(res) || !isFinite(res)) return "+"; // Fallback phòng hờ lỗi chia 0
          return res >= 0 ? "+" : "-";
       };
 
       let signs: string[] = [];
       for (let i = 0; i <= uniquePoints.length; i++) {
          let testPoint = 0;
-         if (i === 0) testPoint = uniquePoints.length > 0 ? uniquePoints[0] - 1 : 0;
-         else if (i === uniquePoints.length) testPoint = uniquePoints[i-1] + 1;
-         else testPoint = (uniquePoints[i-1] + uniquePoints[i]) / 2;
+         if (i === 0) testPoint = uniquePoints.length > 0 ? uniquePoints[0].val - 1 : 0;
+         else if (i === uniquePoints.length) testPoint = uniquePoints[i-1].val + 1;
+         else testPoint = (uniquePoints[i-1].val + uniquePoints[i].val) / 2;
          signs.push(signOfDerivAt(testPoint)); 
       }
 
-      // 3. Xây dựng cấu trúc Cột
+      // 6. TÍNH GIỚI HẠN / GIÁ TRỊ TẠI CÁC ĐIỂM (Cực trị & Tiệm cận đứng)
+      const getLimit = (xVal: number, direction = 0) => {
+         let testX = xVal;
+         if (xVal === -1000) testX = -1e6;
+         else if (xVal === 1000) testX = 1e6;
+         else if (direction === -1) testX = xVal - 1e-6; // Tiến về bên trái
+         else if (direction === 1) testX = xVal + 1e-6;  // Tiến về bên phải
+
+         const res = getNum(expr.subs({ x: testX }));
+         if (isNaN(res)) return "?";
+         if (res > 1e4 || !isFinite(res)) return (res > 0 || Object.is(res, Infinity)) ? "+\\infty" : "-\\infty";
+         if (res < -1e4) return "-\\infty";
+         return Math.round(res * 100) / 100;
+      };
+
+      // 7. XÂY DỰNG CẤU TRÚC CỘT (COLUMNS DATA)
       let cols: any[] = [];
-      cols.push({ type: 'val', x: "-\\infty", yPrime: "", y: getLimit(-1000) });
+      //cols.push({ type: 'val', x: "-\\infty", isDis: false, y: getLimit(-1000) });
+      cols.push({ type: 'val', x: "-\\infty", isDis: false, yPrime: "", y: getLimit(-1000) });
       
       for (let i = 0; i < uniquePoints.length; i++) {
+         let pt = uniquePoints[i];
          cols.push({ type: 'interval', sign: signs[i] });
-         cols.push({ type: 'val', x: uniquePoints[i], yPrime: "0", y: getLimit(uniquePoints[i]) });
+
+         if (pt.isDis) {
+             // Điểm gián đoạn (Có giới hạn trái và giới hạn phải)
+             cols.push({
+                 type: 'val', x: pt.val, isDis: true,
+                 yPrime: "", // Đã sửa: Xóa yPrime tại tiệm cận đứng
+                 yLeft: getLimit(pt.val, -1),
+                 yRight: getLimit(pt.val, 1)
+             });
+         } else {
+             // Điểm cực đại / cực tiểu bình thường
+             cols.push({
+                 type: 'val', x: pt.val, isDis: false,
+                 yPrime: "0", y: getLimit(pt.val, 0)
+             });
+         }
       }
       
       cols.push({ type: 'interval', sign: signs[signs.length - 1] });
-      cols.push({ type: 'val', x: "+\\infty", yPrime: "", y: getLimit(1000) });
+      cols.push({ type: 'val', x: "+\\infty", isDis: false, y: getLimit(1000) });
 
-      // Tính vị trí Y (TOP/BOTTOM) cho điểm cực trị
+      // 8. XÁC ĐỊNH TỌA ĐỘ Y (TOP/BOTTOM) ĐỂ VẼ CHỮ & MŨI TÊN KHÔNG BỊ CHỒNG LÊN NHAU
       let valCols = cols.filter(c => c.type === 'val');
       for(let i=0; i<valCols.length; i++) {
-          if (i === 0) valCols[i].pos = signs[0] === '+' ? 'BOTTOM' : 'TOP';
-          else if (i === valCols.length - 1) valCols[i].pos = signs[signs.length - 1] === '+' ? 'TOP' : 'BOTTOM';
-          else {
+          let c = valCols[i];
+          if (i === 0) {
+              c.pos = signs[0] === '+' ? 'BOTTOM' : 'TOP';
+          } else if (i === valCols.length - 1) {
+              c.pos = signs[signs.length - 1] === '+' ? 'TOP' : 'BOTTOM';
+          } else {
               let inSign = signs[i-1];
               let outSign = signs[i];
-              if (inSign === '+' && outSign === '-') valCols[i].pos = 'TOP'; 
-              else if (inSign === '-' && outSign === '+') valCols[i].pos = 'BOTTOM'; 
-              else valCols[i].pos = 'MIDDLE'; 
+
+              if (c.isDis) {
+                  c.posLeft = inSign === '+' ? 'TOP' : 'BOTTOM';
+                  c.posRight = outSign === '+' ? 'BOTTOM' : 'TOP';
+              } else {
+                  if (inSign === '+' && outSign === '-') c.pos = 'TOP'; 
+                  else if (inSign === '-' && outSign === '+') c.pos = 'BOTTOM'; 
+                  else c.pos = 'MIDDLE'; 
+              }
           }
       }
 
-      // 4. VẼ BẢNG BẰNG SVG THUẦN TÚY (TUYỆT ĐỐI KHÔNG BỊ VỠ TRONG WORD)
+      // 9. VẼ BẢNG BIẾN THIÊN BẰNG SVG THUẦN TÚY
       const X_OFFSET = 50; 
       const COL_W = 60; 
       const W = X_OFFSET + cols.length * COL_W; 
-      const H = 180; // Tổng chiều cao bảng
+      const H = 180; 
 
-      // Tính tọa độ tâm X (cx) cho từng cột
       let currentX = X_OFFSET;
-      cols.forEach(c => {
-          c.cx = currentX + COL_W / 2;
-          currentX += COL_W;
-      });
+      cols.forEach(c => { c.cx = currentX + COL_W / 2; currentX += COL_W; });
 
       let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background-color: white;">`;
       
-      // Định nghĩa đầu mũi tên
+      // Đầu mũi tên đồ thị
       svgString += `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="black" /></marker></defs>`;
       
-      // Viền bảng và các đường kẻ ngang/dọc
+      // Khung viền và các trục cắt ngang/dọc
       svgString += `<rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="black" stroke-width="1.5"/>`;
       svgString += `<line x1="0" y1="40" x2="${W}" y2="40" stroke="black" stroke-width="1.5"/>`;
       svgString += `<line x1="0" y1="80" x2="${W}" y2="80" stroke="black" stroke-width="1.5"/>`;
       svgString += `<line x1="${X_OFFSET}" y1="0" x2="${X_OFFSET}" y2="${H}" stroke="black" stroke-width="1.5"/>`;
 
-      // Font chuẩn
       const FONT = `font-family="Times New Roman, serif" font-size="18px" text-anchor="middle" dominant-baseline="middle"`;
       
-      // Vẽ cột nhãn
+      // Nhãn các trục
       svgString += `<text x="${X_OFFSET/2}" y="20" ${FONT} font-style="italic">x</text>`;
       svgString += `<text x="${X_OFFSET/2}" y="60" ${FONT} font-style="italic">y'</text>`;
       svgString += `<text x="${X_OFFSET/2}" y="130" ${FONT} font-style="italic">y</text>`;
 
-      // Vẽ nội dung các cột
+      // Render nội dung các cột
       cols.forEach((c, i) => {
           if (c.type === 'val') {
-              // Dòng x
+              // --- Xử lý dòng x ---
               let txtX = c.x === "-\\infty" ? "-\u221E" : (c.x === "+\\infty" ? "+\u221E" : c.x);
               svgString += `<text x="${c.cx}" y="20" ${FONT}>${txtX}</text>`;
               
-              // Dòng y'
-              if (c.yPrime !== "") svgString += `<text x="${c.cx}" y="60" ${FONT}>${c.yPrime}</text>`;
-              
-              // Dòng y (Xác định yD (Tọa độ y của chữ) dựa trên pos)
-              let txtY = c.y === "-\\infty" ? "-\u221E" : (c.y === "+\\infty" ? "+\u221E" : c.y);
-              let yD = c.pos === 'TOP' ? 100 : (c.pos === 'BOTTOM' ? 165 : 130);
-              svgString += `<text x="${c.cx}" y="${yD}" ${FONT} font-weight="bold">${txtY}</text>`;
+              if (c.isDis) {
+                  // VẼ TIỆM CẬN ĐỨNG (2 gạch dọc || song song)
+                  svgString += `<line x1="${c.cx - 3}" y1="40" x2="${c.cx - 3}" y2="${H}" stroke="black" stroke-width="1.5"/>`;
+                  svgString += `<line x1="${c.cx + 3}" y1="40" x2="${c.cx + 3}" y2="${H}" stroke="black" stroke-width="1.5"/>`;
+
+                  // Hàng y (Giới hạn trái và phải ốp sát 2 bên đường tiệm cận)
+                  let txtYL = c.yLeft === "-\\infty" ? "-\u221E" : (c.yLeft === "+\\infty" ? "+\u221E" : c.yLeft);
+                  let txtYR = c.yRight === "-\\infty" ? "-\u221E" : (c.yRight === "+\\infty" ? "+\u221E" : c.yRight);
+                  
+                  let yDLeft = c.posLeft === 'TOP' ? 100 : 165;
+                  let yDRight = c.posRight === 'TOP' ? 100 : 165;
+
+                  svgString += `<text x="${c.cx - 20}" y="${yDLeft}" ${FONT} font-weight="bold">${txtYL}</text>`;
+                  svgString += `<text x="${c.cx + 20}" y="${yDRight}" ${FONT} font-weight="bold">${txtYR}</text>`;
+              } else {
+                  // --- Xử lý hàm liên tục ---
+                  //if (c.yPrime !== "") svgString += `<text x="${c.cx}" y="60" ${FONT}>${c.yPrime}</text>`;
+                  if (c.yPrime) svgString += `<text x="${c.cx}" y="60" ${FONT}>${c.yPrime}</text>`;
+                  
+                  let txtY = c.y === "-\\infty" ? "-\u221E" : (c.y === "+\\infty" ? "+\u221E" : c.y);
+                  let yD = c.pos === 'TOP' ? 100 : (c.pos === 'BOTTOM' ? 165 : 130);
+                  svgString += `<text x="${c.cx}" y="${yD}" ${FONT} font-weight="bold">${txtY}</text>`;
+              }
           } else {
-              // Dòng y' (Dấu)
+              // --- Vẽ Dấu (+/-) & Mũi tên Đồ thị ---
               svgString += `<text x="${c.cx}" y="60" ${FONT} fill="red" font-weight="bold">${c.sign}</text>`;
               
-              // Vẽ mũi tên cho dòng y
               const prevVal = cols[i - 1];
               const nextVal = cols[i + 1];
-              let y1 = prevVal.pos === 'TOP' ? 112 : (prevVal.pos === 'BOTTOM' ? 152 : 130);
-              let y2 = nextVal.pos === 'TOP' ? 112 : (nextVal.pos === 'BOTTOM' ? 152 : 130);
-              let x1 = prevVal.cx + 20;
-              let x2 = nextVal.cx - 24; // Chừa chỗ cho đầu mũi tên
+              
+              // Căn chỉnh tọa độ y để mũi tên nghiêng chuẩn
+              let y1 = prevVal.isDis ? (prevVal.posRight === 'TOP' ? 112 : 152) : (prevVal.pos === 'TOP' ? 112 : (prevVal.pos === 'BOTTOM' ? 152 : 130));
+              let y2 = nextVal.isDis ? (nextVal.posLeft === 'TOP' ? 112 : 152) : (nextVal.pos === 'TOP' ? 112 : (nextVal.pos === 'BOTTOM' ? 152 : 130));
+              
+              // Lùi điểm xuất phát/kết thúc mũi tên ra xa hơn 1 chút nếu gặp đường 2 gạch (||)
+              let x1 = prevVal.cx + (prevVal.isDis ? 32 : 20);
+              let x2 = nextVal.cx - (nextVal.isDis ? 38 : 24);
               
               svgString += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5" marker-end="url(#arrow)" />`;
           }
@@ -1219,6 +1282,7 @@ export default function App() {
 
       return { svgString, mathWidthEx: W/14, mathHeightEx: H/14, bieuThuc: latex };
     } catch (err) {
+      console.error("Lỗi vẽ BBT:", err);
       return null;
     }
   }, [currentLatex]);
