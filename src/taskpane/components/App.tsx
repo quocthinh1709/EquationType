@@ -86,7 +86,10 @@ const uiText = {
     computeSystemNoSolution: "\\text{Hệ vô nghiệm hoặc số liệu không hợp lệ}",
     computeNotSupported: "\\text{Phiên bản thư viện chưa hỗ trợ hàm này}",
     computeSolveNotSupported: "\\text{Chưa hỗ trợ giải phương trình này hoặc vô nghiệm}",
-    computeError: "Lỗi: Không thể tính toán biểu thức này."
+    computeError: "Lỗi: Không thể tính toán biểu thức này.",
+    derivative: "Đạo hàm",
+    integrate: "Tích phân",
+    limit: "Giới hạn"
   },
   en: {
     webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
@@ -136,7 +139,10 @@ const uiText = {
     computeSystemNoSolution: "\\text{No solution or invalid data}",
     computeNotSupported: "\\text{Library version does not support this function}",
     computeSolveNotSupported: "\\text{Equation type not supported or no solution}",
-    computeError: "Error: Cannot compute this expression."
+    computeError: "Error: Cannot compute this expression.",
+    derivative: "Derivative",
+    integrate: "Integrate",
+    limit: "Limit"
   }
 };
 
@@ -168,7 +174,7 @@ export default function App() {
 
   const t = uiText[language]; // Biến 't' này sẽ dùng để gọi chữ ra UI
 
-  const handleCompute = (action: "evaluate" | "simplify" | "expand" | "expandAll" | "factor" | "solve") => {
+  const handleCompute = (action: "evaluate" | "simplify" | "expand" | "expandAll" | "factor" | "solve" |"derivative" |"integrate"| "limit") => {
     if (!currentLatex) return;
 
     try {
@@ -190,6 +196,130 @@ export default function App() {
           break;
         case "factor": // Phân tích nhân tử (vd: x^2 - 1 = (x-1)(x+1))
           resultLatex = ce.expr(["Factor", expr]).evaluate().latex;
+          break;
+        case "derivative": // Đạo hàm (vd: d/dx(x^2) = 2x)
+          resultLatex = ce.expr(["Derivative", expr]).evaluate().latex;
+          break;
+        case "integrate": // Tích phân / Nguyên hàm
+          // 1. Tự động tìm ẩn số để truyền vào engine (VD: x, t, y)
+          let intVar = "x";
+          if (expr.unknowns && expr.unknowns.length > 0) {
+            intVar = expr.unknowns[0];
+          } else if (currentLatex.includes("t")) {
+            intVar = "t";
+          } else if (currentLatex.includes("y")) {
+            intVar = "y";
+          }
+
+          // 2. Chặn lỗi bấm nhầm: Nếu người dùng đã gõ sẵn ký hiệu \int 
+          // (ví dụ: \int x^2 dx) nhưng lại bấm nhầm nút "Integrate" thay vì "Evaluate"
+          if (currentLatex.includes("\\int")) {
+            const evalInt = expr.evaluate();
+            if (evalInt && ((evalInt as any).head === "Integrate" || evalInt.latex.includes("\\int"))) {
+              resultLatex = t.computeNotSupported;
+            } else {
+              resultLatex = evalInt.latex;
+            }
+          } 
+          // 3. Xử lý chuẩn: Bôi đen biểu thức (vd: x^2) và bấm nút Integrate
+          else {
+            const evalInt = ce.expr(["Integrate", expr, intVar]).evaluate();
+            
+            // Kiểm tra xem CortexJS có giải được không
+            if (evalInt && ((evalInt as any).head === "Integrate" || evalInt.latex.includes("\\int"))) {
+              resultLatex = t.computeNotSupported;
+            } else {
+              // Bổ sung hằng số tích phân C cho chuẩn chỉnh về mặt toán học
+              resultLatex = evalInt.latex + " + C";
+            }
+          }
+          break;
+        case "limit": // Giới hạn (Hỗ trợ vô cực và 1 bên)
+          const limitRegex = /\\lim\s*_\s*\{\s*([a-zA-Z])\s*(?:\\to|\\rightarrow)\s*([^}]+)\s*\}(.*)/;
+          const limitMatch = currentLatex.match(limitRegex);
+
+          if (limitMatch) {
+            const varName = limitMatch[1];
+            let targetLatex = limitMatch[2].trim();
+            const funcLatex = limitMatch[3];
+
+            let direction = 0;
+            if (targetLatex.includes("^+") || targetLatex.includes("^{+}")) {
+              direction = 1;
+              targetLatex = targetLatex.replace(/\^\{\+\}|\^\+/g, "");
+            } else if (targetLatex.includes("^-") || targetLatex.includes("^{-}")) {
+              direction = -1;
+              targetLatex = targetLatex.replace(/\^\{-\}|\^\-/g, "");
+            }
+
+            const funcExpr = ce.parse(funcLatex);
+            const targetExpr = ce.parse(targetLatex);
+
+            try {
+              // CHIẾN LƯỢC MỚI: ƯU TIÊN THẾ SỐ TRƯỚC (NUMERIC FIRST)
+              let testValueStr = targetLatex;
+
+              if (targetLatex.includes("\\infty")) {
+                if (targetLatex.includes("-")) {
+                  testValueStr = "-10000000"; // Thế -10 triệu
+                } else {
+                  testValueStr = "10000000";  // Thế 10 triệu
+                }
+              } else {
+                let numTarget = parseFloat((targetExpr as any).numericValue || targetExpr.value || targetLatex);
+                if (!isNaN(numTarget)) {
+                  if (direction === 1) numTarget += 1e-7;
+                  else if (direction === -1) numTarget -= 1e-7;
+                  else numTarget += 1e-8; // Lệch siêu nhỏ để tránh lỗi chia 0
+                  testValueStr = numTarget.toString();
+                }
+              }
+
+              // Ép thư viện tính ra số thập phân thực tế (Dùng .N())
+              const subExpr = funcExpr.subs({ [varName]: ce.parse(testValueStr) });
+              const numericValObj = subExpr.N();
+              
+              let numericRes = NaN;
+              if (numericValObj && typeof (numericValObj as any).numericValue === 'number') {
+                numericRes = (numericValObj as any).numericValue;
+              } else {
+                numericRes = parseFloat(numericValObj.toString());
+              }
+
+              // Phân tích kết quả số học
+              if (!isNaN(numericRes)) {
+                if (numericRes > 1e5 || !isFinite(numericRes)) {
+                  resultLatex = "+\\infty";
+                } else if (numericRes < -1e5) {
+                  resultLatex = "-\\infty";
+                } else {
+                  // Làm tròn khử sai số (vd: 1e-7 sẽ tự động thành 0)
+                  resultLatex = (Math.round(numericRes * 10000) / 10000).toString();
+                }
+              } else {
+                // Dự phòng cuối: Nếu thế số thất bại, mới gọi Symbolic Limit của CortexJS
+                let evalLimit = direction !== 0 
+                  ? ce.expr(["Limit", funcExpr, varName, targetExpr, direction]).evaluate()
+                  : ce.expr(["Limit", funcExpr, varName, targetExpr]).evaluate();
+                
+                if (evalLimit && ((evalLimit as any).head === "Limit" || evalLimit.latex.includes("\\lim"))) {
+                  resultLatex = t.computeNotSupported;
+                } else {
+                  resultLatex = evalLimit.latex;
+                }
+              }
+            } catch (e) {
+              resultLatex = t.computeNotSupported;
+            }
+          } else {
+            // Dành cho biểu thức không chứa cấu trúc \lim
+            const evalResult = expr.evaluate();
+            if (evalResult && ((evalResult as any).head === "Limit" || evalResult.latex.includes("\\lim"))) {
+               resultLatex = t.computeNotSupported;
+            } else {
+               resultLatex = evalResult ? evalResult.latex : t.computeNotSupported;
+            }
+          }
           break;
         case "solve":
           // 1. Tự động tìm các ẩn số có trong biểu thức (VD: x, y, z...)
@@ -1521,6 +1651,9 @@ export default function App() {
                 onClick={() => handleCompute("solve")}
                 style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }}
               />
+              <DefaultButton iconProps={{ iconName: 'CalculatorAddition' }} text={t.derivative} onClick={() => handleCompute("derivative")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'CalculatorSubtract' }} text={t.integrate} onClick={() => handleCompute("integrate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'CalculatorMultiply' }} text={t.limit} onClick={() => handleCompute("limit")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
             </Stack>
 
             {computeResult && (
