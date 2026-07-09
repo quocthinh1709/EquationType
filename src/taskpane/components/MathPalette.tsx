@@ -54,7 +54,7 @@ const MathBtn = ({ displayLatex, insertLatex, title, onInsert, borderColor }: {
             }}
         >
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, zIndex: 10, cursor: "pointer" }} />
-            <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "18px", outline: "none", color: "inherit" }}>
+            <math-field read-only style={{ pointerEvents: "none", border: "none", background: "transparent", padding: 0, margin: 0, minHeight: "auto", fontSize: "18px", outline: "none", color: "inherit", fontFamily: "'STIX2', 'KaTeX_Main', serif !important" }}>
                 {displayLatex}
             </math-field>
         </DefaultButton>
@@ -738,11 +738,9 @@ export default function MathPalette({ onInsert, language }: MathPaletteProps) {
                         <MathBtn displayLatex="\bigcirc" insertLatex="\bigcirc" title="\bigcirc" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\bullet" insertLatex="\bullet" title="\bullet" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\wr" insertLatex="\wr" title="\wr" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\oplus" insertLatex="\oplus" title="\oplus" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\ominus" insertLatex="\ominus" title="\ominus" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\otimes" insertLatex="\otimes" title="\otimes" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        
                         <MathBtn displayLatex="\oslash" insertLatex="\oslash" title="\oslash" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\odot" insertLatex="\odot" title="\odot" onInsert={onInsert} borderColor={PaletteColors.default} />
+                       
                         <MathBtn displayLatex="\circ" insertLatex="\circ" title="\circ" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\setminus" insertLatex="\setminus" title="\setminus" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\amalg" insertLatex="\amalg" title="\amalg" onInsert={onInsert} borderColor={PaletteColors.default} />

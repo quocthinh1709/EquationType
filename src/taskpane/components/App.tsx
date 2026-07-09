@@ -47,7 +47,7 @@ const uiText = {
     editDict: "Sửa Từ điển",
     saveToDict: "Lưu vào Từ điển",
     modeLabel: "Chế độ:",
-    eEditorOnly: "E-Editor (Chỉ)",
+    eEditorOnly: "E-Editor",
     eEditor: "E-Editor",
     office: "Office",
     officeMathWarning: "⚠️ Office Math không được hỗ trợ. Chỉ chèn kiểu E-Editor.",
@@ -58,10 +58,11 @@ const uiText = {
     expand: "Khai triển",
     expandAll: "Khai triển hết",
     factor: "Nhân tử",
-    solve: "Giải PT",
+    solve: "Tìm nghiệm",
     resultLabel: "Kết quả:",
     insertToWord: "Chèn vào Word",
     previewVertical: "Xem trước phép tính dọc:",
+    previewVariation: "Xem trước Bảng biến thiên:",
     addDictTitle: "Thêm vào từ điển",
     addDictSubText: "Công thức này sẽ được lưu lại để bạn gõ nhanh lần sau.",
     inlineOpt: "Inline (Tự động chuyển đổi khi gõ)",
@@ -111,6 +112,7 @@ const uiText = {
     resultLabel: "Result:",
     insertToWord: "Insert into Word",
     previewVertical: "Preview Vertical Math:",
+    previewVariation: "Preview Variation Table:",
     addDictTitle: "Add to Dictionary",
     addDictSubText: "This equation will be saved for quick typing next time.",
     inlineOpt: "Inline (Auto-convert while typing)",
@@ -145,7 +147,10 @@ export default function App() {
   const mathfieldRef = useRef<MathfieldElement | null>(null);
   const lastEqIdRef = useRef<string>("");
   const [currentLatex, setCurrentLatex] = useState("");
-  const [insertMode, setInsertMode] = useState<string>("mathml");
+
+  const [insertMode, setInsertMode] = useState<string>(() => {
+    return localStorage.getItem("math_insert_mode") || "mathml";
+  });
 
 
   // --- BẮT ĐẦU: STATE VÀ LOGIC CHO COMPUTE ENGINE ---
@@ -280,6 +285,7 @@ export default function App() {
   useEffect(() => {
     if (isUnsupported && insertMode === "mathml") {
       setInsertMode("svg");
+      localStorage.setItem("math_insert_mode", "svg"); // LƯU VÀO BỘ NHỚ
     }
   }, [isUnsupported, insertMode]);
 
@@ -664,6 +670,9 @@ export default function App() {
     if (!currentLatex) return null;
     let bieuThuc = currentLatex.trim();
 
+    //Bỏ qua tính dọc nếu là hàm số
+    if (bieuThuc.includes('y=') || bieuThuc.includes('f(x)=')) return null;
+
     // 1. Nhận diện loại phép toán
     const laPhepNhan = bieuThuc.includes('\\times') || bieuThuc.includes('\\cdot') || bieuThuc.includes('*') || bieuThuc.includes('x');
     const laPhepChia = bieuThuc.includes('\\frac') || bieuThuc.includes('\\div') || bieuThuc.includes('/');
@@ -712,6 +721,7 @@ export default function App() {
         }
 
         const height = linesCount * LINE_H + MARGIN * 2;
+
         mathWidthEx = width / 14;
         mathHeightEx = height / 14;
 
@@ -780,7 +790,7 @@ export default function App() {
 
         // Vẽ kết quả cuối cùng
         let currentY = LINE_H * 3 + MARGIN + 6;
-        svgString += `<text x="${rightEdge}" y="${currentY}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+        svgString += `<text x="${rightEdge}" y="${currentY + 8}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
 
         svgString += `</svg>`;
 
@@ -910,6 +920,220 @@ export default function App() {
     }
   };
 
+  // ==========================================
+  // TÍNH NĂNG MỚI: PREVIEW BẢNG BIẾN THIÊN (DẠNG SVG CHUẨN, NGHIỆM CHÍNH XÁC)
+  // ==========================================
+  const variationTablePreview = useMemo(() => {
+    if (!currentLatex) return null;
+    const latex = currentLatex.trim();
+    if (!latex.startsWith("y=") && !latex.startsWith("f(x)=")) return null;
+
+    try {
+      const rhs = latex.substring(latex.indexOf("=") + 1).trim();
+      const expr = ce.parse(rhs);
+      
+      // 1. Tính đạo hàm y' (Ép Expand để tránh lỗi phương trình chưa rút gọn)
+      const deriv = ce.expr(["Derivative", expr, "x"]).evaluate().simplify();
+      console.log("Đạo hàm y':", deriv.toString(), "latex:", deriv.latex);
+      // 2. Tìm nghiệm y' = 0
+      const solveRes = ce.expr(["Solve", ["Equal", deriv, 0], "x"]).evaluate();
+      console.log("Nghiệm y' = 0:", solveRes.toString(), "latex:", solveRes.latex);
+
+      let rawRoots: number[] = [];
+      
+      // HÀM MỚI: Quét đệ quy sâu vào mọi ngóc ngách của kết quả để tìm số
+      const extractRootsRecursively = (node: any) => {
+          if (!node) return;
+          if (typeof node === 'number') { rawRoots.push(node); return; }
+          if (typeof node.numericValue === 'number') { rawRoots.push(node.numericValue); return; }
+          if (typeof node.value === 'number') { rawRoots.push(node.value); return; }
+          
+          if (node.head === "Equal" && node.ops && node.ops.length === 2) {
+              extractRootsRecursively(node.ops[1]);
+              return;
+          }
+          if (node.ops && Array.isArray(node.ops)) {
+              node.ops.forEach((op: any) => extractRootsRecursively(op));
+          }
+      };
+      
+      extractRootsRecursively(solveRes);
+
+      // Lọc trùng và sắp xếp nghiệm
+      rawRoots.sort((a, b) => a - b);
+      let uniquePoints: number[] = [];
+      for(let i=0; i<rawRoots.length; i++) {
+          if (i > 0 && Math.abs(rawRoots[i] - rawRoots[i-1]) < 1e-6) continue;
+          uniquePoints.push(rawRoots[i]);
+      }
+
+      // Hàm ép tính toán ra số thực
+      const getNum = (exprNode: any) => {
+          const val = exprNode.evaluate();
+          if (val.numericValue !== undefined && val.numericValue !== null) return val.numericValue;
+          return parseFloat(val.toString());
+      };
+
+      const getLimit = (xVal: number) => {
+         const res = getNum(expr.subs({ x: xVal }));
+         if (isNaN(res)) return "?";
+         if (res > 1e5 || !isFinite(res)) return (res > 0 || Object.is(res, Infinity)) ? "+\\infty" : "-\\infty";
+         if (res < -1e5) return "-\\infty";
+         return Math.round(res * 100) / 100;
+      };
+
+      const signOfDerivAt = (xVal: number) => {
+         const res = getNum(deriv.subs({ x: xVal }));
+         if (isNaN(res)) return "+"; 
+         return res >= 0 ? "+" : "-";
+      };
+
+      let signs: string[] = [];
+      for (let i = 0; i <= uniquePoints.length; i++) {
+         let testPoint = 0;
+         if (i === 0) testPoint = uniquePoints.length > 0 ? uniquePoints[0] - 1 : 0;
+         else if (i === uniquePoints.length) testPoint = uniquePoints[i-1] + 1;
+         else testPoint = (uniquePoints[i-1] + uniquePoints[i]) / 2;
+         signs.push(signOfDerivAt(testPoint)); 
+      }
+
+      // 3. Xây dựng cấu trúc Cột
+      let cols: any[] = [];
+      cols.push({ type: 'val', x: "-\\infty", yPrime: "", y: getLimit(-1000) });
+      
+      for (let i = 0; i < uniquePoints.length; i++) {
+         cols.push({ type: 'interval', sign: signs[i] });
+         cols.push({ type: 'val', x: uniquePoints[i], yPrime: "0", y: getLimit(uniquePoints[i]) });
+      }
+      
+      cols.push({ type: 'interval', sign: signs[signs.length - 1] });
+      cols.push({ type: 'val', x: "+\\infty", yPrime: "", y: getLimit(1000) });
+
+      // Tính vị trí Y (TOP/BOTTOM) cho điểm cực trị
+      let valCols = cols.filter(c => c.type === 'val');
+      for(let i=0; i<valCols.length; i++) {
+          if (i === 0) valCols[i].pos = signs[0] === '+' ? 'BOTTOM' : 'TOP';
+          else if (i === valCols.length - 1) valCols[i].pos = signs[signs.length - 1] === '+' ? 'TOP' : 'BOTTOM';
+          else {
+              let inSign = signs[i-1];
+              let outSign = signs[i];
+              if (inSign === '+' && outSign === '-') valCols[i].pos = 'TOP'; 
+              else if (inSign === '-' && outSign === '+') valCols[i].pos = 'BOTTOM'; 
+              else valCols[i].pos = 'MIDDLE'; 
+          }
+      }
+
+      // 4. VẼ BẢNG BẰNG SVG THUẦN TÚY (TUYỆT ĐỐI KHÔNG BỊ VỠ TRONG WORD)
+      const X_OFFSET = 50; 
+      const COL_W = 60; 
+      const W = X_OFFSET + cols.length * COL_W; 
+      const H = 180; // Tổng chiều cao bảng
+
+      // Tính tọa độ tâm X (cx) cho từng cột
+      let currentX = X_OFFSET;
+      cols.forEach(c => {
+          c.cx = currentX + COL_W / 2;
+          currentX += COL_W;
+      });
+
+      let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background-color: white;">`;
+      
+      // Định nghĩa đầu mũi tên
+      svgString += `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="black" /></marker></defs>`;
+      
+      // Viền bảng và các đường kẻ ngang/dọc
+      svgString += `<rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="black" stroke-width="1.5"/>`;
+      svgString += `<line x1="0" y1="40" x2="${W}" y2="40" stroke="black" stroke-width="1.5"/>`;
+      svgString += `<line x1="0" y1="80" x2="${W}" y2="80" stroke="black" stroke-width="1.5"/>`;
+      svgString += `<line x1="${X_OFFSET}" y1="0" x2="${X_OFFSET}" y2="${H}" stroke="black" stroke-width="1.5"/>`;
+
+      // Font chuẩn
+      const FONT = `font-family="Times New Roman, serif" font-size="18px" text-anchor="middle" dominant-baseline="middle"`;
+      
+      // Vẽ cột nhãn
+      svgString += `<text x="${X_OFFSET/2}" y="20" ${FONT} font-style="italic">x</text>`;
+      svgString += `<text x="${X_OFFSET/2}" y="60" ${FONT} font-style="italic">y'</text>`;
+      svgString += `<text x="${X_OFFSET/2}" y="130" ${FONT} font-style="italic">y</text>`;
+
+      // Vẽ nội dung các cột
+      cols.forEach((c, i) => {
+          if (c.type === 'val') {
+              // Dòng x
+              let txtX = c.x === "-\\infty" ? "-\u221E" : (c.x === "+\\infty" ? "+\u221E" : c.x);
+              svgString += `<text x="${c.cx}" y="20" ${FONT}>${txtX}</text>`;
+              
+              // Dòng y'
+              if (c.yPrime !== "") svgString += `<text x="${c.cx}" y="60" ${FONT}>${c.yPrime}</text>`;
+              
+              // Dòng y (Xác định yD (Tọa độ y của chữ) dựa trên pos)
+              let txtY = c.y === "-\\infty" ? "-\u221E" : (c.y === "+\\infty" ? "+\u221E" : c.y);
+              let yD = c.pos === 'TOP' ? 100 : (c.pos === 'BOTTOM' ? 165 : 130);
+              svgString += `<text x="${c.cx}" y="${yD}" ${FONT} font-weight="bold">${txtY}</text>`;
+          } else {
+              // Dòng y' (Dấu)
+              svgString += `<text x="${c.cx}" y="60" ${FONT} fill="red" font-weight="bold">${c.sign}</text>`;
+              
+              // Vẽ mũi tên cho dòng y
+              const prevVal = cols[i - 1];
+              const nextVal = cols[i + 1];
+              let y1 = prevVal.pos === 'TOP' ? 112 : (prevVal.pos === 'BOTTOM' ? 152 : 130);
+              let y2 = nextVal.pos === 'TOP' ? 112 : (nextVal.pos === 'BOTTOM' ? 152 : 130);
+              let x1 = prevVal.cx + 20;
+              let x2 = nextVal.cx - 24; // Chừa chỗ cho đầu mũi tên
+              
+              svgString += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="black" stroke-width="1.5" marker-end="url(#arrow)" />`;
+          }
+      });
+
+      svgString += `</svg>`;
+
+      return { svgString, mathWidthEx: W/14, mathHeightEx: H/14, bieuThuc: latex };
+    } catch (err) {
+      return null;
+    }
+  }, [currentLatex]);
+
+
+  // HÀM CHÈN SVG BẢNG BIẾN THIÊN VÀO WORD
+  const handleInsertVariationTable = async () => {
+    if (!variationTablePreview) return;
+    const { svgString, mathWidthEx, mathHeightEx, bieuThuc } = variationTablePreview;
+
+    try {
+      // Mã hóa SVG để Word đọc được
+      let utf8Encoded = encodeURIComponent(svgString).replace(/%([0-9A-F]{2})/g, (_match, p1) => String.fromCharCode(parseInt(p1, 16)));
+      let insertContent = window.btoa(utf8Encoded);
+
+      const eqId = "EQT" + new Date().getTime();
+      Office.context.document.settings.set(eqId, bieuThuc);
+      await Office.context.document.settings.saveAsync();
+
+      await Word.run(async (context) => {
+        const range = context.document.getSelection();
+        range.load("font/size");
+        await context.sync();
+
+        const currentFontSize = range.font.size || 12;
+        const exToPt = currentFontSize * 0.44;
+
+        // Chèn ảnh dạng SVG
+        const picture = range.insertInlinePictureFromBase64(insertContent, Word.InsertLocation.replace);
+        picture.width = mathWidthEx * exToPt;
+        picture.height = mathHeightEx * exToPt;
+        picture.lockAspectRatio = true;
+        picture.altTextTitle = "Variation Table";
+        picture.altTextDescription = `Math: ${bieuThuc} #[ID:${eqId}|SVG]`;
+
+        const newCc = picture.getRange().insertContentControl();
+        newCc.title = "LSTS_Math";
+        newCc.tag = eqId + "|SVG";
+        newCc.appearance = Word.ContentControlAppearance.hidden;
+        await context.sync();
+      });
+    } catch (err) {
+      console.error("Lỗi chèn BBT: ", err);
+    }
+  };
 
   useEffect(() => {
     if (containerRef.current && !mathfieldRef.current) {
@@ -1137,16 +1361,28 @@ export default function App() {
   return (
     <ThemeProvider theme={officeGreenTheme}>
       <div style={{ padding: "8px", height: "100vh", boxSizing: "border-box", backgroundColor: "#faf9f8", overflowY: "auto" }}>
-        <Toggle
-          onText="Tiếng Việt"
-          offText="English"
-          checked={language === 'vi'}
-          onChange={(_, checked) => {
-            const newLang = checked ? 'vi' : 'en';
-            setLanguage(newLang);
-            localStorage.setItem("math_user_lang", newLang); // Lưu lại
-          }}
-        />
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "8px"
+        }}>
+          <Label style={{ fontSize: "14px", fontWeight: "bold", margin: 0, color: "#107c41" }}>
+            Easy Efficient Equation Editor
+          </Label>
+
+          <Toggle
+            onText="Tiếng Việt"
+            offText="English"
+            checked={language === 'vi'}
+            onChange={(_, checked) => {
+              const newLang = checked ? 'vi' : 'en';
+              setLanguage(newLang);
+              localStorage.setItem("math_user_lang", newLang);
+            }}
+            styles={{ root: { margin: 0 } }} // Bỏ margin để căn chỉnh chính xác
+          />
+        </div>
         <Stack tokens={{ childrenGap: 12 }}>
           {isOnline && (
             <MessageBar messageBarType={MessageBarType.blocked} isMultiline={true}>
@@ -1242,7 +1478,11 @@ export default function App() {
                 onText={isUnsupported ? t.eEditorOnly : t.eEditor}
                 offText={t.office}
                 checked={insertMode === "svg"}
-                onChange={(_ev, checked) => setInsertMode(checked ? "svg" : "mathml")}
+                onChange={(_ev, checked) => {
+                  const newMode = checked ? "svg" : "mathml";
+                  setInsertMode(newMode);
+                  localStorage.setItem("math_insert_mode", newMode); // LƯU VÀO BỘ NHỚ
+                }}
                 disabled={isUnsupported}
                 styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }}
               />
@@ -1332,7 +1572,32 @@ export default function App() {
             </div>
           )}
 
+          {/* DÁN KHỐI GIAO DIỆN BẢNG BIẾN THIÊN VÀO ĐÂY */}
+          {variationTablePreview && (
+            <div style={{
+              marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px",
+              border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center"
+            }}>
+              <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>
+                {t.previewVariation}
+              </Label>
 
+              {/* Đã đổi từ htmlString sang svgString ở dòng dưới đây */}
+              <div style={{
+                backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto"
+              }}
+                dangerouslySetInnerHTML={{ __html: variationTablePreview.svgString }}
+              />
+
+              <PrimaryButton
+                text={t.insertToWord}
+                iconProps={{ iconName: "Table" }}
+                onClick={handleInsertVariationTable}
+                style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }}
+              />
+            </div>
+          )}
 
           <Dialog hidden={!isAddDictOpen} onDismiss={() => setIsAddDictOpen(false)} dialogContentProps={{ type: DialogType.normal, title: t.addDictTitle, subText: t.addDictSubText }}>
             <ChoiceGroup options={[{ key: 'inline', text: t.inlineOpt }, { key: 'macro', text: t.macroOpt }]} selectedKey={dictType} onChange={(_, option) => setDictType(option?.key as "inline" | "macro")} />
