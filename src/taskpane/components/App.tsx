@@ -187,6 +187,12 @@ export default function App() {
     setBbtData({ ...bbtData, cols: newCols });
   };
 
+  const updateBbtLabel = (field: string, value: string) => {
+    if (!bbtData) return;
+    const currentLabels = bbtData.labels || { x: "x", yPrime: "y'", y: "y" };
+    setBbtData({ ...bbtData, labels: { ...currentLabels, [field]: value } });
+  };
+
   // 3. EFFECT TỰ ĐỘNG VẼ LẠI SVG MỖI KHI DỮ LIỆU CHỈNH SỬA BỊ THAY ĐỔI
   // [BƯỚC 2] EFFECT TỰ ĐỘNG VẼ LẠI VÀ RENDER LATEX SVG
   useEffect(() => {
@@ -244,11 +250,11 @@ export default function App() {
 
     const FONT = `font-family="Times New Roman, serif" font-size="28px" text-anchor="middle" dominant-baseline="middle"`;
     // Tọa độ Y của nhãn cột đầu tiên cũng dịch xuống tương ứng
-    svgString += `<text x="${X_OFFSET/2}" y="30" ${FONT} font-style="italic">x</text>`;
-    svgString += `<text x="${X_OFFSET/2}" y="82.5" ${FONT} font-style="italic">y'</text>`;
-    svgString += `<text x="${X_OFFSET/2}" y="197.5" ${FONT} font-style="italic">y</text>`;
+    //svgString += `<text x="${X_OFFSET/2}" y="30" ${FONT} font-style="italic">x</text>`;
+    //svgString += `<text x="${X_OFFSET/2}" y="82.5" ${FONT} font-style="italic">y'</text>`;
+    //svgString += `<text x="${X_OFFSET/2}" y="197.5" ${FONT} font-style="italic">y</text>`;
 
-    const renderCell = (text: string, cx: number, cy: number, isBold = false, isRed = false) => {
+    const renderCell = (text: string, cx: number, cy: number, isBold = false, isRed = false, isItalic = false) => {
         let rawText = (text || "").toString().trim();
         if (!rawText) return "";
         
@@ -284,8 +290,15 @@ export default function App() {
         let cleanText = rawText.replace(/-\\infty/g, "-\u221E").replace(/\+\\infty/g, "+\u221E").replace(/\\infty/g, "\u221E");
         const weight = isBold ? 'font-weight="bold"' : '';
         const fill = isRed ? 'fill="red"' : 'fill="black"';
-        return `<text x="${cx}" y="${cy}" ${FONT} ${weight} ${fill}>${cleanText}</text>`;
+        const italic = isItalic ? 'font-style="italic"' : ''; // Bổ sung cờ in nghiêng
+        //return `<text x="${cx}" y="${cy}" ${FONT} ${weight} ${fill}>${cleanText}</text>`;
+        return `<text x="${cx}" y="${cy}" ${FONT} ${weight} ${fill} ${italic}>${cleanText}</text>`;
     };
+// --- VẼ LẠI 3 NHÃN DỰA TRÊN DỮ LIỆU ĐỘNG ---
+    const labels = bbtData.labels || { x: "x", yPrime: "y'", y: "y" };
+    svgString += renderCell(labels.x, X_OFFSET/2, 30, false, false, true);
+    svgString += renderCell(labels.yPrime, X_OFFSET/2, 82.5, false, false, true);
+    svgString += renderCell(labels.y, X_OFFSET/2, 197.5, false, false, true);
 
     // --- 2. DỜI HỆ TỌA ĐỘ ĐỒ THỊ Y XUỐNG ĐỂ NÉ HÀNG Y' ---
     const Y_TOP = 140;
@@ -1542,7 +1555,12 @@ export default function App() {
       cols.push({ type: 'interval', sign: signs[signs.length - 1] });
       cols.push({ type: 'val', x: "+\\infty", isDis: false, y: getLimit(1000) });
 
-      setBbtData({ cols, bieuThuc: latex });
+      //setBbtData({ cols, bieuThuc: latex });
+      setBbtData({ 
+          cols, 
+          bieuThuc: latex,
+          labels: { x: "x", yPrime: "y'", y: "y" } // Thêm dữ liệu nhãn mặc định
+      });
     } catch (err) {
       console.error("Lỗi vẽ BBT:", err);
       setVariationTablePreview(null);
@@ -2102,9 +2120,13 @@ export default function App() {
               <div style={{ width: "100%", marginBottom: "16px", backgroundColor: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #d1d1d1", overflowX: "auto" }}>
                 <Label style={{ fontSize: "12px", color: "#605e5c", marginBottom: "8px" }}>Bảng chỉnh sửa thủ công (nếu cần):</Label>
                 <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
+                  
                   <tbody>
                     <tr>
-                      <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center', width: '30px' }}>x</td>
+                      {/* <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center', width: '30px' }}>x</td> */}
+                      <td style={{ paddingRight: '12px', textAlign: 'center', width: '50px' }}>
+                                  <input type="text" value={bbtData.labels?.x || 'x'} onChange={(e) => updateBbtLabel('x', e.target.value)} style={{ width: '100%', minWidth: '40px', textAlign: 'center', border: '1px solid #ccc', borderRadius: '4px', padding: '4px', fontWeight: 'bold', fontStyle: 'italic', backgroundColor: '#e1dfdd' }} />
+                              </td>
                       {bbtData.cols.map((col: any, idx: number) => (
                         <td key={`x-${idx}`} style={{ padding: '2px' }}>
                           {col.type === 'val' && (
@@ -2114,7 +2136,10 @@ export default function App() {
                       ))}
                     </tr>
                     <tr>
-                      <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center' }}>y'</td>
+                      {/* <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center' }}>y'</td> */}
+                      <td style={{ paddingRight: '12px', textAlign: 'center' }}>
+                                  <input type="text" value={bbtData.labels?.yPrime || "y'"} onChange={(e) => updateBbtLabel('yPrime', e.target.value)} style={{ width: '100%', minWidth: '40px', textAlign: 'center', border: '1px solid #ccc', borderRadius: '4px', padding: '4px', fontWeight: 'bold', fontStyle: 'italic', backgroundColor: '#e1dfdd' }} />
+                              </td>
                       {bbtData.cols.map((col: any, idx: number) => (
                         <td key={`yp-${idx}`} style={{ padding: '2px' }}>
                           {col.type === 'interval' ? (
@@ -2126,7 +2151,10 @@ export default function App() {
                       ))}
                     </tr>
                     <tr>
-                      <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center' }}>y</td>
+                      {/* <td style={{ fontWeight: 'bold', paddingRight: '12px', textAlign: 'center' }}>y</td> */}
+                      <td style={{ paddingRight: '12px', textAlign: 'center' }}>
+                                  <input type="text" value={bbtData.labels?.y || 'y'} onChange={(e) => updateBbtLabel('y', e.target.value)} style={{ width: '100%', minWidth: '40px', textAlign: 'center', border: '1px solid #ccc', borderRadius: '4px', padding: '4px', fontWeight: 'bold', fontStyle: 'italic', backgroundColor: '#e1dfdd' }} />
+                              </td>
                       {bbtData.cols.map((col: any, idx: number) => (
                         <td key={`y-${idx}`} style={{ padding: '2px' }}>
                           {col.type === 'val' && (
