@@ -166,11 +166,15 @@ export default function App() {
   const defaultMacrosRef = useRef<any>(null);
 
   const [statusMessage, setStatusMessage] = useState<{ text: string, type: MessageBarType } | null>(null);
+  
 
   const [language, setLanguage] = useState<Language>(() => {
     // Đọc từ localStorage, nếu chưa có thì mặc định là 'vi'
     return (localStorage.getItem("math_user_lang") as Language) || "vi";
   });
+
+  const [verticalMathPreview, setVerticalMathPreview] = useState<any>(null);
+  const [variationTablePreview, setVariationTablePreview] = useState<any>(null);
 
   const t = uiText[language]; // Biến 't' này sẽ dùng để gọi chữ ra UI
 
@@ -561,121 +565,7 @@ export default function App() {
       console.error("Lỗi đọc công thức:", error);
     }
   }, []);
-  /*
-    const handleReadEquation = useCallback(async () => {
-      try {
-        await Word.run(async (context) => {
-          const range = context.document.getSelection();
-          const cc = range.parentContentControlOrNullObject;
-          cc.load("title, tag");
-          const ccs = range.contentControls;
-          ccs.load("items/title, items/tag");
-          await context.sync();
   
-          let newFullTag = "";
-          let newTargetCC: Word.ContentControl | null = null;
-  
-          if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") {
-            newFullTag = ccs.items[0].tag;
-            newTargetCC = ccs.items[0];
-          } else if (!cc.isNullObject && cc.title === "LSTS_Math") {
-            newFullTag = cc.tag;
-            newTargetCC = cc;
-          }
-  
-          const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
-          const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
-  
-          if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
-            const oldEqId = lastEqIdRef.current.split("|")[0];
-            const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
-            const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
-            oldControls.load("items");
-            await context.sync();
-  
-            let isOldDeleted = false;
-            if (oldControls.items.length === 0) {
-              isOldDeleted = true;
-            } else {
-              const oldCC = oldControls.items[0];
-              const oldRange = oldCC.getRange();
-              const oldPics = oldRange.inlinePictures;
-              oldPics.load("items");
-              oldRange.load("text");
-              await context.sync();
-  
-              const rawText = oldRange.text;
-              if (oldEqType === "SVG") {
-                if (oldPics.items.length === 0) {
-                  isOldDeleted = true;
-                }
-              } else {
-                if (rawText === "") {
-                  isOldDeleted = true;
-                }
-              }
-  
-              if (isOldDeleted) {
-                oldCC.delete(false);
-                await context.sync();
-              }
-            }
-  
-            if (isOldDeleted) {
-              //Office.context.document.settings.remove(oldEqId);
-              //Office.context.document.settings.saveAsync();
-              if (!newFullTag) {
-                if (mathfieldRef.current) mathfieldRef.current.value = "";
-                setCurrentLatex("");
-              }
-            }
-          }
-  
-          if (newFullTag && newTargetCC) {
-            lastEqIdRef.current = newFullTag;
-            const ccRange = newTargetCC.getRange();
-            const pics = ccRange.inlinePictures;
-            pics.load("items");
-            ccRange.load("text");
-            await context.sync();
-  
-            const rawText = ccRange.text;
-            const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-            const isPlaceholder = cleanText.includes("clickortap") || cleanText.includes("vănbản");
-  
-            let isEmptied = false;
-            if (newEqType === "SVG") {
-              isEmptied = pics.items.length === 0 && (cleanText === "" || isPlaceholder);
-            } else {
-              isEmptied = isPlaceholder || rawText === "";
-            }
-  
-            if (isEmptied) {
-              if (mathfieldRef.current) mathfieldRef.current.value = "";
-              setCurrentLatex("");
-              lastEqIdRef.current = "";
-              newTargetCC.delete(false);
-              //Office.context.document.settings.remove(newEqId);
-              //Office.context.document.settings.saveAsync();
-              await context.sync();
-            } else {
-              const latexCode = Office.context.document.settings.get(newEqId);
-              if (latexCode && mathfieldRef.current) {
-                if (mathfieldRef.current.value !== latexCode) {
-                  mathfieldRef.current.value = latexCode;
-                  setCurrentLatex(latexCode);
-                }
-              }
-            }
-          } else {
-            lastEqIdRef.current = "";
-          }
-        });
-      } catch (error) {
-        // Bỏ qua lỗi ngầm
-      }
-    }, []);
-  */
   const handleInsertEquation = async () => {
     if (!mathfieldRef.current) return;
 
@@ -796,6 +686,7 @@ export default function App() {
   // ==========================================
   // HOOK TÍNH TOÁN & VẼ SVG XEM TRƯỚC (PREVIEW) - HỖ TRỢ CỘNG/TRỪ/NHÂN/CHIA
   // ==========================================
+  /*
   const verticalMathPreview = useMemo(() => {
     if (!currentLatex) return null;
     let bieuThuc = currentLatex.trim();
@@ -1006,6 +897,220 @@ export default function App() {
     }
   }, [currentLatex]);
 
+  */
+// ==========================================
+  // HÀM TẠO PREVIEW PHÉP TÍNH DỌC (GỌI KHI BẤM NÚT)
+  // ==========================================
+  const handlePreviewVertical = () => {
+    if (!currentLatex) { setVerticalMathPreview(null); return; }
+    let bieuThuc = currentLatex.trim();
+
+    if (bieuThuc.includes('y=') || bieuThuc.includes('f(x)=')) { setVerticalMathPreview(null); return; }
+
+    const laPhepNhan = bieuThuc.includes('\\times') || bieuThuc.includes('\\cdot') || bieuThuc.includes('*') || bieuThuc.includes('x');
+    const laPhepChia = bieuThuc.includes('\\frac') || bieuThuc.includes('\\div') || bieuThuc.includes('/');
+    const laPhepCong = bieuThuc.includes('+');
+    const laPhepTru = bieuThuc.includes('-');
+
+    if (!laPhepNhan && !laPhepChia && !laPhepCong && !laPhepTru) {
+        // Tích hợp cảnh báo nếu người dùng bấm nút sai mục đích
+        setStatusMessage({ text: "Vui lòng nhập phép tính +, -, *, / cơ bản để xem tính dọc.", type: MessageBarType.warning });
+        setVerticalMathPreview(null); 
+        return; 
+    }
+
+    const CHAR_W = 16.5; const LINE_H = 32; const MARGIN = 15;
+    const FONT_STYLE = `font-family="Arial, monospace" font-size="28px"`;
+
+    try {
+      let svgString = "";
+      let mathWidthEx = 0;
+      let mathHeightEx = 0;
+
+      if (laPhepNhan) {
+        // --- XỬ LÝ NHÂN DỌC ---
+        let chuoiSach = bieuThuc.replace(/\\times/g, '*').replace(/\\cdot/g, '*').replace(/x/g, '*').replace(/\\text\{\*\}/g, '*');
+        const mangSo = chuoiSach.split('*');
+        if (mangSo.length !== 2) return null;
+
+        let strSo1 = mangSo[0].trim();
+        let strSo2 = mangSo[1].trim();
+        let nSo1 = parseInt(strSo1, 10);
+        let nSo2 = parseInt(strSo2, 10);
+
+        if (isNaN(nSo1) || isNaN(nSo2)) return null;
+
+        let ketQuaCuoi = (nSo1 * nSo2).toString();
+        const maxChars = Math.max(strSo1.length, strSo2.length, ketQuaCuoi.length);
+        const width = maxChars * CHAR_W + MARGIN * 3;
+
+        let linesCount = 2;
+        let partials = [];
+        if (strSo2.length > 1) {
+          for (let i = strSo2.length - 1; i >= 0; i--) {
+            partials.push((nSo1 * parseInt(strSo2[i], 10)).toString());
+          }
+          linesCount += partials.length + 1;
+        } else {
+          linesCount += 1;
+        }
+
+        const height = linesCount * LINE_H + MARGIN * 2;
+
+        mathWidthEx = width / 14;
+        mathHeightEx = height / 14;
+
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+        const rightEdge = width - MARGIN;
+
+        svgString += `<text x="${rightEdge}" y="${LINE_H + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo1}</text>`;
+        svgString += `<text x="${rightEdge}" y="${LINE_H * 2 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo2}</text>`;
+
+        let offsetDauNhanX = rightEdge - Math.max(strSo1.length, strSo2.length) * CHAR_W - 10;
+        svgString += `<text x="${offsetDauNhanX}" y="${LINE_H * 1.5 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">×</text>`;
+
+        svgString += `<line x1="${MARGIN}" y1="${LINE_H * 2 + MARGIN + 8}" x2="${rightEdge}" y2="${LINE_H * 2 + MARGIN + 8}" stroke="black" stroke-width="3"/>`;
+
+        let currentY = LINE_H * 3 + MARGIN + 6;
+
+        if (partials.length === 0) {
+          svgString += `<text x="${rightEdge}" y="${currentY}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+        } else {
+          partials.forEach((p, index) => {
+            let offsetRight = rightEdge - (index * CHAR_W);
+            svgString += `<text x="${offsetRight}" y="${currentY}" text-anchor="end" ${FONT_STYLE} fill="black">${p}</text>`;
+            currentY += LINE_H;
+          });
+          svgString += `<line x1="${MARGIN}" y1="${currentY - LINE_H + 12}" x2="${rightEdge}" y2="${currentY - LINE_H + 12}" stroke="black" stroke-width="3"/>`;
+          svgString += `<text x="${rightEdge}" y="${currentY + 8}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+        }
+        svgString += `</svg>`;
+
+      } else if (laPhepCong || laPhepTru) {
+        // --- XỬ LÝ CỘNG / TRỪ DỌC ---
+        let toanTu = laPhepCong ? '+' : '-';
+        const mangSo = bieuThuc.split(toanTu);
+        if (mangSo.length !== 2) return null;
+
+        let strSo1 = mangSo[0].trim();
+        let strSo2 = mangSo[1].trim();
+        let nSo1 = parseInt(strSo1, 10);
+        let nSo2 = parseInt(strSo2, 10);
+
+        if (isNaN(nSo1) || isNaN(nSo2)) return null;
+
+        // Tính kết quả dựa trên dấu
+        let ketQuaCuoi = laPhepCong ? (nSo1 + nSo2).toString() : (nSo1 - nSo2).toString();
+
+        const maxChars = Math.max(strSo1.length, strSo2.length, ketQuaCuoi.length);
+        const width = maxChars * CHAR_W + MARGIN * 3;
+        const height = 3 * LINE_H + MARGIN * 2; // Luôn luôn có 3 dòng
+
+        mathWidthEx = width / 14;
+        mathHeightEx = height / 14;
+
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+        const rightEdge = width - MARGIN;
+
+        // Vẽ số thứ 1 và 2 (căn phải)
+        svgString += `<text x="${rightEdge}" y="${LINE_H + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo1}</text>`;
+        svgString += `<text x="${rightEdge}" y="${LINE_H * 2 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${strSo2}</text>`;
+
+        // Tính toán vị trí dấu cộng/trừ để bám sát lề trái của số dài nhất
+        let offsetDauX = rightEdge - Math.max(strSo1.length, strSo2.length) * CHAR_W - 10;
+        svgString += `<text x="${offsetDauX}" y="${LINE_H * 1.5 + MARGIN}" text-anchor="end" ${FONT_STYLE} fill="black">${toanTu}</text>`;
+
+        // Gạch ngang ngăn cách
+        svgString += `<line x1="${MARGIN}" y1="${LINE_H * 2 + MARGIN + 8}" x2="${rightEdge}" y2="${LINE_H * 2 + MARGIN + 8}" stroke="black" stroke-width="3"/>`;
+
+        // Vẽ kết quả cuối cùng
+        let currentY = LINE_H * 3 + MARGIN + 6;
+        svgString += `<text x="${rightEdge}" y="${currentY + 8}" text-anchor="end" ${FONT_STYLE} fill="black">${ketQuaCuoi}</text>`;
+
+        svgString += `</svg>`;
+
+      } else {
+        // --- XỬ LÝ CHIA DỌC ---
+        let strBiChia = ""; let strChia = "";
+        if (bieuThuc.includes('\\frac')) {
+          const match = bieuThuc.match(/\\frac\{([0-9]+)\}\{([0-9]+)\}/);
+          if (match) { strBiChia = match[1]; strChia = match[2]; }
+        } else {
+          let chuoiSach = bieuThuc.replace(/\\div/g, '/').replace(/\\text\{\/\}/g, '/');
+          const mangSo = chuoiSach.split('/');
+          if (mangSo.length === 2) { strBiChia = mangSo[0].trim(); strChia = mangSo[1].trim(); }
+        }
+
+        const nBiChia = parseInt(strBiChia, 10);
+        const nChia = parseInt(strChia, 10);
+
+        if (isNaN(nBiChia) || isNaN(nChia) || nChia === 0) return null;
+
+        let thuong = "";
+        let leftRows = [];
+        leftRows.push({ text: strBiChia, spaces: 0 });
+
+        let soDuStr = ""; let chiSo = 0; let laLuotDauTien = true;
+
+        while (chiSo < strBiChia.length) {
+          if (laLuotDauTien) {
+            let soTamStr = strBiChia[chiSo];
+            while (parseInt(soTamStr, 10) < nChia && chiSo + 1 < strBiChia.length) {
+              chiSo++; soTamStr += strBiChia[chiSo];
+            }
+            let nTam = parseInt(soTamStr, 10);
+            thuong += Math.floor(nTam / nChia).toString();
+            soDuStr = (nTam % nChia).toString();
+            laLuotDauTien = false; chiSo++;
+          } else {
+            let chuSoHa = strBiChia[chiSo];
+            let dongHaSo = soDuStr + chuSoHa;
+            let viTriHa = chiSo + 1;
+            leftRows.push({ text: dongHaSo, spaces: Math.max(0, viTriHa - dongHaSo.length) });
+
+            let nTam = parseInt(dongHaSo, 10);
+            thuong += Math.floor(nTam / nChia).toString();
+            soDuStr = (nTam % nChia).toString();
+            chiSo++;
+          }
+        }
+        let viTriCuoi = strBiChia.length;
+        leftRows.push({ text: soDuStr, spaces: Math.max(0, viTriCuoi - soDuStr.length) });
+
+        const leftMaxChars = strBiChia.length;
+        const rightMaxChars = Math.max(strChia.length, thuong.length);
+        const width = (leftMaxChars + rightMaxChars + 2) * CHAR_W + MARGIN * 3;
+        const height = Math.max(leftRows.length, 2) * LINE_H + MARGIN * 2;
+
+        mathWidthEx = width / 14;
+        mathHeightEx = height / 14;
+
+        svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+
+        const vLineX = MARGIN + leftMaxChars * CHAR_W + (CHAR_W / 2);
+        svgString += `<line x1="${vLineX}" y1="${MARGIN / 2}" x2="${vLineX}" y2="${height - MARGIN}" stroke="black" stroke-width="3"/>`;
+
+        leftRows.forEach((row, idx) => {
+          let xPos = MARGIN + row.spaces * CHAR_W;
+          let yPos = (idx + 1) * LINE_H + MARGIN / 2;
+          svgString += `<text x="${xPos}" y="${yPos}" ${FONT_STYLE} fill="black">${row.text}</text>`;
+        });
+
+        const rightX = vLineX + CHAR_W;
+        svgString += `<text x="${rightX}" y="${LINE_H + MARGIN / 2}" ${FONT_STYLE} fill="black">${strChia}</text>`;
+        svgString += `<line x1="${vLineX}" y1="${LINE_H + MARGIN / 2 + 8}" x2="${width - MARGIN}" y2="${LINE_H + MARGIN / 2 + 8}" stroke="black" stroke-width="3"/>`;
+        svgString += `<text x="${rightX}" y="${LINE_H * 2 + MARGIN / 2 + 4}" ${FONT_STYLE} fill="#010101">${thuong || "0"}</text>`;
+
+        svgString += `</svg>`;
+      }
+      
+      // Kéo xuống cuối hàm, thay đổi dòng return cũ thành:
+      setVerticalMathPreview({ svgString, mathWidthEx, mathHeightEx, bieuThuc });
+    } catch (err) {
+      setVerticalMathPreview(null);
+    }
+  };
+
   // ==========================================
   // HÀM 3: CHÈN TRỰC TIẾP DỮ LIỆU ĐÃ TÍNH Ở BƯỚC PREVIEW
   // ==========================================
@@ -1050,20 +1155,23 @@ export default function App() {
     }
   };
 
+// ==========================================
+  // HÀM TẠO PREVIEW BẢNG BIẾN THIÊN (GỌI KHI BẤM NÚT)
   // ==========================================
-  // TÍNH NĂNG MỚI: PREVIEW BẢNG BIẾN THIÊN (DẠNG SVG CHUẨN, NGHIỆM CHÍNH XÁC)
-  // ==========================================
-  // ==========================================
-  // TÍNH NĂNG MỚI: PREVIEW BẢNG BIẾN THIÊN (HỖ TRỢ HÀM PHÂN THỨC, TIỆM CẬN ĐỨNG)
-  // ==========================================
-  const variationTablePreview = useMemo(() => {
-    if (!currentLatex) return null;
+  const handlePreviewVariation = () => {
+    if (!currentLatex) { setVariationTablePreview(null); return; }
     const latex = currentLatex.trim();
-    if (!latex.startsWith("y=") && !latex.startsWith("f(x)=")) return null;
-
+    
+    if (!latex.startsWith("y=") && !latex.startsWith("f(x)=")) { 
+        setStatusMessage({ text: "Vui lòng nhập hàm số bắt đầu bằng y= hoặc f(x)= để vẽ BBT.", type: MessageBarType.warning });
+        setVariationTablePreview(null); 
+        return; 
+    }
+    
     try {
       const rhs = latex.substring(latex.indexOf("=") + 1).trim();
       const expr = ce.parse(rhs);
+      
 
       // 1. HÀM QUÉT NGHIỆM ĐỆ QUY (Tìm sâu các giá trị số trong MathJSON)
       const extractRootsRecursively = (node: any, targetArray: number[]) => {
@@ -1081,24 +1189,147 @@ export default function App() {
           }
       };
 
-      // 2. TÌM ĐIỂM GIÁN ĐOẠN (MẪU SỐ BẰNG 0) DÀNH CHO HÀM PHÂN THỨC
+      
+
+      // Hàm ép tính toán kết quả ra số thực (đưa lên trước vì cần dùng sớm)
+      const getNum = (exprNode: any) => {
+          const val = exprNode.evaluate();
+          if (val.numericValue !== undefined && val.numericValue !== null) return val.numericValue;
+          const p = parseFloat(val.toString());
+          return isNaN(p) ? NaN : p;
+      };
+
+      // Quy 1 số thực về phân số đẹp p/q (nếu có), dùng thuật toán continued fraction
+      const toNiceFraction = (x: number, tol = 1e-6, maxDen = 100): [number, number] | null => {
+          if (!isFinite(x)) return null;
+          const sign = x < 0 ? -1 : 1;
+          let ax = Math.abs(x);
+          let h1 = 1, h2 = 0, k1 = 0, k2 = 1, b = ax;
+          let iter = 0;
+          do {
+              const a = Math.floor(b);
+              [h1, h2] = [a * h1 + h2, h1];
+              [k1, k2] = [a * k1 + k2, k1];
+              const rem = b - a;
+              if (rem < 1e-12) break;
+              b = 1 / rem;
+              iter++;
+          } while (Math.abs(ax - h1 / k1) > ax * tol && k1 < maxDen && iter < 20);
+          if (k1 > maxDen || k1 === 0) return null;
+          return [sign * h1, k1];
+      };
+
+      // Format 1 số thực thành LaTeX đẹp: số nguyên, phân số, hoặc số thập phân làm tròn (fallback)
+      const niceNumber = (x: number): string => {
+          if (!isFinite(x)) return x > 0 ? "+\\infty" : "-\\infty";
+          const r = Math.round(x * 1e6) / 1e6;
+          if (Math.abs(r - Math.round(r)) < 1e-6) return String(Math.round(r));
+          const frac = toNiceFraction(r);
+          if (frac) {
+              const [p, q] = frac;
+              const sign = p < 0 ? "-" : "";
+              return `${sign}${Math.abs(p)}/${q}`; // <-- chữ thường "p/q", KHÔNG dùng \frac{}{}
+          }
+          return String(Math.round(x * 100) / 100);
+      };
+
+      // === HÀM TÌM NGHIỆM SỐ (thay thế Solve symbolic) ===
+      // Quét dấu trên [lo, hi] với step nhỏ, chia đôi (bisection) tại mọi điểm đổi dấu.
+      // Tìm được cả nghiệm lẻ / nghiệm vô tỉ mà Solve symbolic bỏ sót.
+      const findRootsNumeric = (
+          f: (x: number) => number,
+          lo = -50, hi = 50, steps = 4000
+      ): number[] => {
+          const roots: number[] = [];
+          const dx = (hi - lo) / steps;
+          let prevX = lo;
+          let prevY = f(prevX);
+
+          for (let i = 1; i <= steps; i++) {
+              const x = lo + i * dx;
+              const y = f(x);
+
+              if (isFinite(prevY) && isFinite(y)) {
+                  if (Math.abs(prevY) < 1e-9) {
+                      roots.push(prevX);
+                  } else if (prevY * y < 0) {
+                      // Bisection để tinh chỉnh nghiệm chính xác
+                      let a = prevX, b = x, fa = prevY;
+                      for (let k = 0; k < 60; k++) {
+                          const m = (a + b) / 2;
+                          const fm = f(m);
+                          if (!isFinite(fm)) break;
+                          if (fa * fm <= 0) { b = m; } else { a = m; fa = fm; }
+                      }
+                      roots.push((a + b) / 2);
+                  }
+              }
+              prevX = x;
+              prevY = y;
+          }
+          // Làm tròn nhẹ để khử sai số dấu phẩy động, rồi lọc trùng gần nhau
+          const rounded = roots.map(r => Math.round(r * 1e6) / 1e6);
+          const uniq: number[] = [];
+          rounded.sort((a, b) => a - b).forEach(r => {
+              if (uniq.length === 0 || Math.abs(r - uniq[uniq.length - 1]) > 1e-4) uniq.push(r);
+          });
+          return uniq;
+      };
+
+      // 2. TÌM ĐIỂM GIÁN ĐOẠN (MẪU SỐ BẰNG 0) DÀNH CHO HÀM PHÂN THỨC — gộp Solve + numeric
       let rawDiscontinuities: number[] = [];
       const fracRegex = /\\frac\{([^}]+)\}\{([^}]+)\}/g;
       let match;
       while ((match = fracRegex.exec(rhs)) !== null) {
           const denomStr = match[2];
           const denomExpr = ce.parse(denomStr);
-          // Tìm nghiệm của mẫu số
-          const solveDenom = ce.expr(["Solve", ["Equal", denomExpr, 0], "x"]).evaluate();
-          extractRootsRecursively(solveDenom, rawDiscontinuities);
+
+          // (a) Thử Solve symbolic trước để lấy nghiệm "đẹp"
+          let solveRootsDenom: number[] = [];
+          try {
+              const solveDenom = ce.expr(["Solve", ["Equal", denomExpr, 0], "x"]).evaluate();
+              extractRootsRecursively(solveDenom, solveRootsDenom);
+          } catch {}
+
+          // (b) Quét numeric để bắt nghiệm lẻ mà Solve bỏ sót
+          const denomFn = (xVal: number) => {
+              try { return getNum(denomExpr.subs({ x: xVal })); }
+              catch { return NaN; }
+          };
+          const numericRootsDenom = findRootsNumeric(denomFn);
+
+          // (c) Gộp: giữ nghiệm Solve nếu trùng vị trí, thêm nghiệm numeric còn thiếu
+          let mergedDenom: number[] = [...solveRootsDenom];
+          numericRootsDenom.forEach(nr => {
+              if (!mergedDenom.some(r => Math.abs(r - nr) < 1e-3)) mergedDenom.push(nr);
+          });
+
+          rawDiscontinuities.push(...mergedDenom);
       }
 
-      // 3. TÍNH ĐẠO HÀM Y' VÀ TÌM CỰC TRỊ Y' = 0
-      const deriv = ce.expr(["Derivative", expr, "x"]).evaluate().simplify();
-      const solveRes = ce.expr(["Solve", ["Equal", deriv, 0], "x"]).evaluate();
       
-      let rawRoots: number[] = [];
-      extractRootsRecursively(solveRes, rawRoots);
+      // 3. TÍNH ĐẠO HÀM Y' VÀ TÌM CỰC TRỊ Y' = 0 — gộp Solve + numeric
+      const deriv = ce.expr(["Derivative", expr, "x"]).evaluate().simplify();
+
+      // (a) Thử Solve symbolic trước
+      let solveRoots: number[] = [];
+      try {
+          const solveRes = ce.expr(["Solve", ["Equal", deriv, 0], "x"]).evaluate();
+          extractRootsRecursively(solveRes, solveRoots);
+      } catch {}
+
+      // (b) Quét numeric để bắt nghiệm lẻ Solve bỏ sót
+      const derivFn = (xVal: number) => {
+          try { return getNum(deriv.subs({ x: xVal })); }
+          catch { return NaN; }
+      };
+      const numericRoots = findRootsNumeric(derivFn);
+
+      // (c) Gộp, ưu tiên nghiệm Solve nếu trùng vị trí với nghiệm numeric
+      let rawRoots: number[] = [...solveRoots];
+      numericRoots.forEach(nr => {
+          if (!rawRoots.some(r => Math.abs(r - nr) < 1e-3)) rawRoots.push(nr);
+      });
 
       // 4. GỘP NGHIỆM VÀ ĐIỂM GIÁN ĐOẠN, LỌC TRÙNG VÀ SẮP XẾP TĂNG DẦN
       let allPoints = [...rawRoots, ...rawDiscontinuities].sort((a, b) => a - b);
@@ -1112,12 +1343,6 @@ export default function App() {
           uniquePoints.push({ val, isDis });
       }
 
-      // Hàm ép tính toán kết quả ra số thực
-      const getNum = (exprNode: any) => {
-          const val = exprNode.evaluate();
-          if (val.numericValue !== undefined && val.numericValue !== null) return val.numericValue;
-          return parseFloat(val.toString());
-      };
 
       // 5. XÉT DẤU Y' TỪNG KHOẢNG (Bằng cách lấy điểm thử Test Point)
       const signOfDerivAt = (xVal: number) => {
@@ -1137,17 +1362,45 @@ export default function App() {
 
       // 6. TÍNH GIỚI HẠN / GIÁ TRỊ TẠI CÁC ĐIỂM (Cực trị & Tiệm cận đứng)
       const getLimit = (xVal: number, direction = 0) => {
-         let testX = xVal;
-         if (xVal === -1000) testX = -1e6;
-         else if (xVal === 1000) testX = 1e6;
-         else if (direction === -1) testX = xVal - 1e-6; // Tiến về bên trái
-         else if (direction === 1) testX = xVal + 1e-6;  // Tiến về bên phải
+         // Trường hợp ±∞ (đuôi hàm)
+         if (xVal === -1000 || xVal === 1000) {
+             const testX = xVal === -1000 ? -1e7 : 1e7;
+             const res = getNum(expr.subs({ x: testX }));
+             if (isNaN(res)) return "?";
+             if (!isFinite(res) || Math.abs(res) > 1e6) return res > 0 ? "+\\infty" : "-\\infty";
+             return niceNumber(res);
+         }
 
-         const res = getNum(expr.subs({ x: testX }));
-         if (isNaN(res)) return "?";
-         if (res > 1e4 || !isFinite(res)) return (res > 0 || Object.is(res, Infinity)) ? "+\\infty" : "-\\infty";
-         if (res < -1e4) return "-\\infty";
-         return Math.round(res * 100) / 100;
+         // Trường hợp cực trị (direction === 0): chỉ lấy giá trị tại đúng điểm đó
+         if (direction === 0) {
+             const val = getNum(expr.subs({ x: xVal }));
+             if (isNaN(val)) return "?";
+             if (!isFinite(val)) return val > 0 ? "+\\infty" : "-\\infty";
+             return niceNumber(val);
+         }
+
+         // Trường hợp tiệm cận đứng: so sánh giá trị ở 2 mức eps để xác định có phân kỳ không
+         // KHÔNG dùng eps nhỏ hơn 1e-6 để tránh mất độ chính xác dấu phẩy động
+         const epsBig = 1e-3;
+         const epsSmall = 1e-6;
+
+         const valBig = getNum(expr.subs({ x: xVal + direction * epsBig }));
+         const valSmall = getNum(expr.subs({ x: xVal + direction * epsSmall }));
+
+         if (!isFinite(valSmall) || isNaN(valSmall)) {
+             return valSmall > 0 ? "+\\infty" : "-\\infty";
+         }
+
+         // Nếu giá trị tăng mạnh (ít nhất gấp 20 lần) khi eps giảm 1000 lần -> đúng là tiệm cận
+         if (isFinite(valBig) && Math.abs(valSmall) > Math.abs(valBig) * 20) {
+             return valSmall > 0 ? "+\\infty" : "-\\infty";
+         }
+         // Nếu bản thân giá trị đã rất lớn thì chắc chắn là tiệm cận
+         if (Math.abs(valSmall) > 1e5) {
+             return valSmall > 0 ? "+\\infty" : "-\\infty";
+         }
+
+         return niceNumber(valSmall);
       };
 
       // 7. XÂY DỰNG CẤU TRÚC CỘT (COLUMNS DATA)
@@ -1162,7 +1415,7 @@ export default function App() {
          if (pt.isDis) {
              // Điểm gián đoạn (Có giới hạn trái và giới hạn phải)
              cols.push({
-                 type: 'val', x: pt.val, isDis: true,
+                 type: 'val', x: niceNumber(pt.val), isDis: true,
                  yPrime: "", // Đã sửa: Xóa yPrime tại tiệm cận đứng
                  yLeft: getLimit(pt.val, -1),
                  yRight: getLimit(pt.val, 1)
@@ -1170,7 +1423,7 @@ export default function App() {
          } else {
              // Điểm cực đại / cực tiểu bình thường
              cols.push({
-                 type: 'val', x: pt.val, isDis: false,
+                 type: 'val', x: niceNumber(pt.val), isDis: false,
                  yPrime: "0", y: getLimit(pt.val, 0)
              });
          }
@@ -1204,7 +1457,7 @@ export default function App() {
 
       // 9. VẼ BẢNG BIẾN THIÊN BẰNG SVG THUẦN TÚY
       const X_OFFSET = 50; 
-      const COL_W = 60; 
+      const COL_W = 100; 
       const W = X_OFFSET + cols.length * COL_W; 
       const H = 180; 
 
@@ -1279,14 +1532,12 @@ export default function App() {
       });
 
       svgString += `</svg>`;
-
-      return { svgString, mathWidthEx: W/14, mathHeightEx: H/14, bieuThuc: latex };
+      setVariationTablePreview({ svgString, mathWidthEx: W/14, mathHeightEx: H/14, bieuThuc: latex });
     } catch (err) {
       console.error("Lỗi vẽ BBT:", err);
-      return null;
+      setVariationTablePreview(null);
     }
-  }, [currentLatex]);
-
+  };
 
   // HÀM CHÈN SVG BẢNG BIẾN THIÊN VÀO WORD
   const handleInsertVariationTable = async () => {
@@ -1363,6 +1614,10 @@ export default function App() {
 
       mf.addEventListener("input", () => {
         setCurrentLatex(mf.getValue("latex-expanded"));
+
+        // Thêm 2 dòng này để tự động đóng giao diện preview cũ khi người dùng gõ phím mới
+        setVerticalMathPreview(null);
+        setVariationTablePreview(null);
       });
     }
 
@@ -1718,6 +1973,8 @@ export default function App() {
               <DefaultButton iconProps={{ iconName: 'CalculatorAddition' }} text={t.derivative} onClick={() => handleCompute("derivative")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'CalculatorSubtract' }} text={t.integrate} onClick={() => handleCompute("integrate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'CalculatorMultiply' }} text={t.limit} onClick={() => handleCompute("limit")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'NumberField' }} text="Tính dọc" onClick={handlePreviewVertical} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+  <DefaultButton iconProps={{ iconName: 'Table' }} text="Vẽ BBT" onClick={handlePreviewVariation} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
             </Stack>
 
             {computeResult && (
