@@ -14,8 +14,8 @@ import { unsupportedMathMlCommands } from "./unsupportedCommands";
 
 // --- IMPORT CÁC MODULE ĐÃ TÁCH ---
 import { officeGreenTheme, uiText, Language } from "./constants";
-import { calculateVariationTableData } from "./mathEngine";
-import { buildVerticalMathPreview, buildVariationTableSvg } from "./svgRenderer";
+import { calculateVariationTableData, createGraphEvaluator } from "./mathEngine";
+import { buildVerticalMathPreview, buildVariationTableSvg, buildGraphSvg } from "./svgRenderer";
 
 initializeIcons();
 const ce = new ComputeEngine();
@@ -36,6 +36,72 @@ export default function App() {
 
   const [verticalMathPreview, setVerticalMathPreview] = useState<any>(null);
   const [variationTablePreview, setVariationTablePreview] = useState<any>(null);
+
+  // --- STATE DÀNH CHO ĐỒ THỊ ---
+  const [graphPreview, setGraphPreview] = useState<any>(null);
+  const [graphConfig, setGraphConfig] = useState({ xMin: -5, xMax: 5, yMin: -5, yMax: 5 });
+  const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number}[]>([]); // Thêm 'name'
+  const [tempPointName, setTempPointName] = useState(""); // Lưu tạm chữ 'A'
+  const [tempPointX, setTempPointX] = useState("");
+  const [graphColor, setGraphColor] = useState("#d13438"); // Lưu màu, mặc định là đỏ sậm
+  // Effect tự động vẽ lại Đồ thị mỗi khi cấu hình hoặc biểu thức thay đổi
+  useEffect(() => {
+    if (!currentLatex || !graphPreview) return;
+    try {
+      const evaluator = createGraphEvaluator(currentLatex, ce);
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor);
+      setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+    } catch (e) {
+      // Bỏ qua lỗi vẽ đồ thị
+    }
+  }, [currentLatex, graphConfig, graphAnnotations, graphColor]); // Tự động chạy lại khi xMin, xMax đổi
+
+  // Nút "Vẽ đồ thị"
+  const handlePreviewGraph = () => {
+    if (!currentLatex) return;
+    try {
+      const evaluator = createGraphEvaluator(currentLatex, ce);
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor);
+      setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+    } catch (e) {
+      setGraphPreview(null);
+    }
+  };
+
+  // Nút chèn đồ thị vào Word
+  const handleInsertGraph = async () => {
+    if (!graphPreview) return;
+    const { svgString, mathWidthEx, mathHeightEx, bieuThuc } = graphPreview;
+    try {
+      let insertContent = window.btoa(encodeURIComponent(svgString).replace(/%([0-9A-F]{2})/g, (_match, p1) => String.fromCharCode(parseInt(p1, 16))));
+      const eqId = "EQG" + new Date().getTime();
+      Office.context.document.settings.set(eqId, bieuThuc); await Office.context.document.settings.saveAsync();
+      await Word.run(async (context) => {
+        const range = context.document.getSelection(); range.load("font/size"); await context.sync();
+        const exToPt = (range.font.size || 12) * 0.44;
+        const picture = range.insertInlinePictureFromBase64(insertContent, Word.InsertLocation.replace);
+        picture.width = mathWidthEx * exToPt; picture.height = mathHeightEx * exToPt; picture.lockAspectRatio = true;
+        picture.altTextTitle = "Graph"; picture.altTextDescription = `Math: ${bieuThuc} #[ID:${eqId}|SVG]`;
+        const newCc = picture.getRange().insertContentControl();
+        newCc.title = "LSTS_Math"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
+        await context.sync();
+      });
+    } catch (err) { console.error("Lỗi chèn Đồ thị: ", err); }
+  };
+
+  const handleAddAnnotation = () => {
+    const xVal = parseFloat(tempPointX);
+    if (isNaN(xVal)) return;
+    const evaluator = createGraphEvaluator(currentLatex, ce);
+    const yVal = evaluator(xVal);
+    if (isNaN(yVal)) return;
+    setGraphAnnotations([...graphAnnotations, {name: tempPointName.trim(), x: xVal, y: yVal }]);
+    setTempPointX("");
+    setTempPointName("");
+  };
+
+
+
   const [bbtData, setBbtData] = useState<any>(null);
 
   const defaultInlineRef = useRef<any>(null);
@@ -334,7 +400,7 @@ export default function App() {
     if (!currentLatex) { setVerticalMathPreview(null); return; }
     let bieuThuc = currentLatex.trim();
     if (bieuThuc.includes('y=') || bieuThuc.includes('f(x)=')) { setVerticalMathPreview(null); return; }
-    
+
     const preview = buildVerticalMathPreview(bieuThuc);
     if (preview) setVerticalMathPreview(preview);
     else {
@@ -540,7 +606,7 @@ export default function App() {
               <DefaultButton iconProps={{ iconName: 'CalculatorMultiply' }} text={t.limit} onClick={() => handleCompute("limit")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'NumberField' }} text="Tính dọc" onClick={handlePreviewVertical} disabled={!isVerticalMathReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'Table' }} text="Vẽ BBT" onClick={handlePreviewVariation} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              
+              <DefaultButton iconProps={{ iconName: 'LineChart' }} text="Vẽ Đồ thị" onClick={handlePreviewGraph} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
             </Stack>
 
             {computeResult && (
@@ -566,7 +632,7 @@ export default function App() {
             <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>{t.previewVariation}</Label>
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: variationTablePreview.svgString }} />
-              
+
               <div style={{ width: "100%", marginBottom: "16px", backgroundColor: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #d1d1d1", overflowX: "auto" }}>
                 <Label style={{ fontSize: "12px", color: "#605e5c", marginBottom: "8px" }}>Bảng chỉnh sửa thủ công (nếu cần):</Label>
                 <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
@@ -593,6 +659,66 @@ export default function App() {
                 </table>
               </div>
               <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "Table" }} onClick={handleInsertVariationTable} style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
+            </div>
+          )}
+
+
+          {/* GIAO DIỆN XEM TRƯỚC VÀ CÀI ĐẶT ĐỒ THỊ */}
+          {graphPreview && (
+            <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>Bản xem trước Đồ thị:</Label>
+
+              <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: graphPreview.svgString }} />
+
+              {/* BẢNG CÀI ĐẶT TRỤC OXY VÀ MÀU SẮC */}
+              <div style={{ width: "100%", marginBottom: "16px", backgroundColor: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #d1d1d1" }}>
+                
+                {/* Hàng 1: Tiêu đề và Nút chọn màu */}
+                <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "8px" }}>
+                   <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>Giới hạn trục tọa độ:</Label>
+                   <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
+                      <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>Màu đồ thị:</Label>
+                      <input 
+                          type="color" 
+                          value={graphColor} 
+                          onChange={(e) => setGraphColor(e.target.value)} 
+                          style={{ width: "24px", height: "24px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }} 
+                      />
+                   </Stack>
+                </Stack>
+                
+                {/* Hàng 2: Các ô nhập giới hạn X, Y */}
+                <Stack horizontal tokens={{ childrenGap: 10 }} verticalAlign="end" wrap>
+                   <TextField label="X Tối thiểu" type="number" value={graphConfig.xMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="X Tối đa" type="number" value={graphConfig.xMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="Y Tối thiểu" type="number" value={graphConfig.yMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="Y Tối đa" type="number" value={graphConfig.yMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
+                </Stack>
+
+                {/* Hàng 3: Gắn tên điểm và tọa độ */}
+                <Label style={{ fontSize: "12px", color: "#605e5c", marginTop: "16px", marginBottom: "8px" }}>Gắn tọa độ điểm (Ví dụ: Cực trị):</Label>
+                <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center">
+                   <TextField placeholder="Tên điểm (VD: A)" value={tempPointName} onChange={(_, v) => setTempPointName(v || "")} styles={{ root: { width: 120 } }} />
+                   <TextField placeholder="Nhập giá trị x..." value={tempPointX} onChange={(_, v) => setTempPointX(v || "")} styles={{ root: { width: 120 } }} />
+                   <DefaultButton text="Thêm điểm" onClick={handleAddAnnotation} />
+                </Stack>
+                
+                {/* Danh sách các điểm đã thêm */}
+                {graphAnnotations.length > 0 && (
+                  <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                     {graphAnnotations.map((pt, idx) => (
+                        <div key={idx} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                           {/* Hiển thị Tên(X, Y) */}
+                           {pt.name ? `${pt.name}` : ""}({Math.round(pt.x*100)/100}, {Math.round(pt.y*100)/100})
+                           
+                           <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => setGraphAnnotations(graphAnnotations.filter((_, i) => i !== idx))} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                        </div>
+                     ))}
+                  </div>
+                )}
+              </div>
+
+              <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "LineChart" }} onClick={handleInsertGraph} style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
             </div>
           )}
 

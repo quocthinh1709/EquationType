@@ -314,3 +314,27 @@ export const calculateVariationTableData = (latex: string, ce: any) => {
 
     return cols;
 };
+
+// ==========================================
+// HÀM CHÍNH: TẠO BỘ TÍNH TOÁN CHO ĐỒ THỊ
+// ==========================================
+export const createGraphEvaluator = (latex: string, ce: any) => {
+    let rhs = latex;
+    if (latex.includes("=")) {
+      rhs = latex.substring(latex.indexOf("=") + 1).trim();
+    }
+    const expr = ce.parse(rhs);
+    
+    // Trả về một hàm nhận x và xuất y
+    return (xVal: number) => {
+        try {
+            const valObj = expr.subs({ x: xVal }).N();
+            let res = typeof (valObj as any).numericValue === 'number' 
+                      ? (valObj as any).numericValue 
+                      : parseFloat(valObj.toString());
+            return res;
+        } catch (e) {
+            return NaN;
+        }
+    };
+};

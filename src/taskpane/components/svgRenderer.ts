@@ -317,3 +317,115 @@ export const buildVariationTableSvg = (bbtData: any) => {
     svgString += `</svg>`;
     return { svgString, mathWidthEx: W/14, mathHeightEx: H/14 };
 };
+
+
+// ==========================================
+// VẼ SVG ĐỒ THỊ HÀM SỐ (GRAPH) - CÓ MÀU VÀ TÊN ĐIỂM
+// ==========================================
+export const buildGraphSvg = (
+    evaluator: (x: number) => number, 
+    config: { xMin: number, xMax: number, yMin: number, yMax: number },
+    annotations: { name: string, x: number, y: number }[], // Thêm trường name
+    lineColor: string = "#d13438" // Thêm tham số màu (Mặc định là đỏ)
+) => {
+    const { xMin, xMax, yMin, yMax } = config;
+    const W = 600; 
+    const H = 600;
+    const P = 50; // Padding lề
+
+    const mapX = (x: number) => P + ((x - xMin) / (xMax - xMin)) * (W - 2 * P);
+    const mapY = (y: number) => H - P - ((y - yMin) / (yMax - yMin)) * (H - 2 * P);
+
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" style="background-color: white; max-width: ${W}px; max-height: ${H}px; display: block; margin: 0 auto; font-family: 'Times New Roman', serif;">`;
+    
+    //svg += `<defs><marker id="axis-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="black" /></marker></defs>`;
+    svg += `<defs>
+                <marker id="axis-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="black" />
+                </marker>
+                <clipPath id="graphClip">
+                    <rect x="${P}" y="${P}" width="${W - 2 * P}" height="${H - 2 * P}" />
+                </clipPath>
+            </defs>`;
+
+    const axisColor = "#000000";
+    const gridColor = "#bebebd";
+    
+    for (let i = Math.ceil(xMin); i <= Math.floor(xMax); i++) {
+        const cx = mapX(i);
+        if (i !== 0) {
+            svg += `<line x1="${cx}" y1="${P}" x2="${cx}" y2="${H-P}" stroke="${gridColor}" stroke-width="1.2" stroke-dasharray="4 4" />`;
+            if (xMax - xMin <= 20 || i % 2 === 0) {
+                svg += `<text x="${cx}" y="${mapY(0) + 18}" font-size="22px" text-anchor="middle" fill="black">${i}</text>`;
+            }
+        }
+    }
+
+    for (let i = Math.ceil(yMin); i <= Math.floor(yMax); i++) {
+        const cy = mapY(i);
+        if (i !== 0) {
+            svg += `<line x1="${P}" y1="${cy}" x2="${W-P}" y2="${cy}" stroke="${gridColor}" stroke-width="1.2" stroke-dasharray="4 4" />`;
+            if (yMax - yMin <= 20 || i % 2 === 0) {
+                svg += `<text x="${mapX(0) - 10}" y="${cy + 5}" font-size="22px" text-anchor="end" fill="black">${i}</text>`;
+            }
+        }
+    }
+
+    const originY = Math.max(P, Math.min(H - P, mapY(0)));
+    svg += `<line x1="${P/2}" y1="${originY}" x2="${W - P/2}" y2="${originY}" stroke="${axisColor}" stroke-width="1.5" marker-end="url(#axis-arrow)" />`;
+    svg += `<text x="${W - P/2 + 10}" y="${originY + 5}" font-size="22px" font-style="italic">x</text>`;
+
+    const originX = Math.max(P, Math.min(W - P, mapX(0)));
+    svg += `<line x1="${originX}" y1="${H - P/2}" x2="${originX}" y2="${P/2}" stroke="${axisColor}" stroke-width="1.5" marker-end="url(#axis-arrow)" />`;
+    svg += `<text x="${originX + 10}" y="${P/2 - 10}" font-size="22px" font-style="italic">y</text>`;
+    
+    svg += `<text x="${originX - 22}" y="${originY + 22}" font-size="22px" font-style="italic">O</text>`;
+
+    const steps = 400;
+    const dx = (xMax - xMin) / steps;
+    let pathD = "";
+    let prevY = NaN;
+
+    for (let i = 0; i <= steps; i++) {
+        const x = xMin + i * dx;
+        const y = evaluator(x);
+
+        if (!isNaN(y) && isFinite(y)) {
+            const cx = mapX(x);
+            const cy = mapY(y);
+
+            const jump = Math.abs(y - prevY);
+            if (i === 0 || isNaN(prevY) || jump > (yMax - yMin) / 2) {
+                pathD += ` M ${cx} ${cy}`; 
+            } else {
+                pathD += ` L ${cx} ${cy}`; 
+            }
+            prevY = y;
+        } else {
+            prevY = NaN;
+        }
+    }
+    
+    // ĐÃ ĐỔI: Dùng biến lineColor thay vì màu đỏ cố định
+    svg += `<path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#graphClip)" />`;
+
+    annotations.forEach(pt => {
+        const cx = mapX(pt.x);
+        const cy = mapY(pt.y);
+        
+        svg += `<line x1="${cx}" y1="${originY}" x2="${cx}" y2="${cy}" stroke="black" stroke-dasharray="4 4" stroke-width="1.5" />`;
+        svg += `<line x1="${originX}" y1="${cy}" x2="${cx}" y2="${cy}" stroke="black" stroke-dasharray="4 4" stroke-width="1.5" />`;
+        
+        // Chấm tròn điểm tọa độ cũng dùng màu cùng với đường đồ thị cho đồng bộ
+        svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${lineColor}" />`;
+        
+        // ĐÃ ĐỔI: Thêm tên điểm (VD: A) vào nhãn
+        const prefix = pt.name ? `${pt.name}` : "";
+        const label = `${prefix}(${Math.round(pt.x*100)/100}, ${Math.round(pt.y*100)/100})`;
+        
+        svg += `<text x="${cx + 8}" y="${cy - 8}" font-size="22px" font-weight="bold" fill="black">${label}</text>`;
+    });
+
+    svg += `</svg>`;
+    return { svgString: svg, mathWidthEx: W/14, mathHeightEx: H/14 };
+};
