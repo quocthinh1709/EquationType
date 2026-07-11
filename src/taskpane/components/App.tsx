@@ -239,7 +239,9 @@ export default function App() {
     let currentX = X_OFFSET;
     cols.forEach((c: any) => { c.cx = currentX + COL_W / 2; currentX += COL_W; });
 
-    let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background-color: white;">`;
+    //let svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="background-color: white;">`;
+    // ĐÃ SỬA: Tự động scale đúng tỷ lệ 100%, vừa khít khung preview mà không bị vỡ hình hay tràn lề
+    let svgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" style="background-color: white; max-width: ${W}px; max-height: ${H}px; display: block; margin: 0 auto;">`;
     svgString += `<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="black" /></marker></defs>`;
     svgString += `<rect x="0" y="0" width="${W}" height="${H}" fill="none" stroke="black" stroke-width="1.5"/>`;
     
