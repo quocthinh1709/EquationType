@@ -40,7 +40,8 @@ export default function App() {
   // --- STATE DÀNH CHO ĐỒ THỊ ---
   const [graphPreview, setGraphPreview] = useState<any>(null);
   const [graphConfig, setGraphConfig] = useState({ xMin: -5, xMax: 5, yMin: -5, yMax: 5 });
-  const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number}[]>([]); // Thêm 'name'
+  //const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number}[]>([]); // Thêm 'name'
+  const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number, latexX: string, latexY: string}[]>([]);
   const [tempPointName, setTempPointName] = useState(""); // Lưu tạm chữ 'A'
   const [tempPointX, setTempPointX] = useState("");
   const [graphColor, setGraphColor] = useState("#d13438"); // Lưu màu, mặc định là đỏ sậm
@@ -90,16 +91,39 @@ export default function App() {
   };
 
   const handleAddAnnotation = () => {
-    const xVal = parseFloat(tempPointX);
-    if (isNaN(xVal)) return;
-    const evaluator = createGraphEvaluator(currentLatex, ce);
-    const yVal = evaluator(xVal);
-    if (isNaN(yVal)) return;
-    setGraphAnnotations([...graphAnnotations, {name: tempPointName.trim(), x: xVal, y: yVal }]);
-    setTempPointX("");
-    setTempPointName("");
-  };
+     if (!tempPointX.trim()) return;
 
+     try {
+         // Bước A: Phân tích giá trị x người dùng nhập (vd: "1/2") thành ký hiệu toán học
+         const xExpr = ce.parse(tempPointX);
+         
+         // Bước B: Thế x vào hàm số y=f(x) hiện tại và rút gọn ra phân số/căn thức chuẩn
+         const funcExpr = ce.parse(currentLatex);
+         const yExpr = funcExpr.subs({ x: xExpr }).evaluate().simplify();
+
+         // Bước C: Tính ra số thực thập phân để định vị điểm ảnh chấm lên màn hình SVG
+         const xNumObj = xExpr.N();
+         const yNumObj = yExpr.N();
+         const xVal = typeof (xNumObj as any).numericValue === 'number' ? (xNumObj as any).numericValue : parseFloat(xNumObj.toString());
+         const yVal = typeof (yNumObj as any).numericValue === 'number' ? (yNumObj as any).numericValue : parseFloat(yNumObj.toString());
+
+         if (isNaN(xVal) || isNaN(yVal)) return;
+
+         // Lưu lại cả tọa độ màn hình (x,y) và tọa độ ký hiệu (latexX, latexY)
+         setGraphAnnotations([...graphAnnotations, { 
+             name: tempPointName.trim(), 
+             x: xVal, 
+             y: yVal,
+             latexX: xExpr.latex, // Lấy nguyên gốc mã phân số của x
+             latexY: yExpr.latex  // Lấy phân số / căn thức của y
+         }]);
+         
+         setTempPointX("");
+         setTempPointName("");
+     } catch (e) {
+         console.error("Lỗi lấy tọa độ điểm:", e);
+     }
+  };
 
 
   const [bbtData, setBbtData] = useState<any>(null);
@@ -589,24 +613,25 @@ export default function App() {
               <Toggle label={t.modeLabel} inlineLabel onText={isUnsupported ? t.eEditorOnly : t.eEditor} offText={t.office} checked={insertMode === "svg"} onChange={(_ev, checked) => { const newMode = checked ? "svg" : "mathml"; setInsertMode(newMode); localStorage.setItem("math_insert_mode", newMode); }} disabled={isUnsupported} styles={{ root: { marginTop: "10px", padding: "10px 0px", marginBottom: isUnsupported ? "4px" : "10px" } }} />
               {isUnsupported && <Label style={{ fontSize: "12px", color: "#d13438", marginTop: "0px", marginBottom: "10px", lineHeight: "1.2" }}>{t.officeMathWarning}</Label>}
             </Stack>
-            <DefaultButton primary text={t.insertBtn} onClick={handleInsertEquation} style={{ height: "44px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }} title="Insert new equation or update selected equation" />
+            <DefaultButton primary text={t.insertBtn} onClick={handleInsertEquation} style={{ height: "35px", backgroundColor: "#107c41", borderColor: "transparent", color: "white", fontSize: "16px", fontWeight: "bold", borderRadius: "8px" }} title="Insert new equation or update selected equation" />
           </Stack>
 
           <div style={{ marginTop: "12px", padding: "12px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd" }}>
             <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", padding: 0 }}>{t.computeLabel}</Label>
-            <Stack horizontal wrap tokens={{ childrenGap: 8 }} style={{ marginBottom: "0px", marginTop: "8px" }}>
-              <DefaultButton iconProps={{ iconName: 'Calculator' }} text={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Broom' }} text={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'ExploreContent' }} text={t.expand} onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'MiniExpand' }} text={t.expandAll} onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Merge' }} text={t.factor} onClick={() => handleCompute("factor")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Variable' }} text={t.solve} onClick={() => handleCompute("solve")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'CalculatorSubtract' }} text={t.derivative} onClick={() => handleCompute("derivative")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'CalculatorAddition' }} text={t.integrate} onClick={() => handleCompute("integrate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'CalculatorMultiply' }} text={t.limit} onClick={() => handleCompute("limit")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'NumberField' }} text="Tính dọc" onClick={handlePreviewVertical} disabled={!isVerticalMathReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Table' }} text="Vẽ BBT" onClick={handlePreviewVariation} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'LineChart' }} text="Vẽ Đồ thị" onClick={handlePreviewGraph} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} />
+            <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginBottom: "0px", marginTop: "8px" }}>
+              {/* <DefaultButton iconProps={{ iconName: 'Calculator' }} text={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} /> */}
+              <DefaultButton iconProps={{ iconName: 'Calculator' }} title={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Broom' }} title={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'ExploreContentSingle' }} title={t.expand} onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'ExploreContent' }} title={t.expandAll} onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'SplitObject' }} title={t.factor} onClick={() => handleCompute("factor")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Variable' }} title={t.solve} onClick={() => handleCompute("solve")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Trending12' }} title={t.derivative} onClick={() => handleCompute("derivative")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'AreaChart' }} title={t.integrate} onClick={() => handleCompute("integrate")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'PaddingRight' }} title={t.limit} onClick={() => handleCompute("limit")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'NumberField' }} title={t.verticalMath} onClick={handlePreviewVertical} disabled={!isVerticalMathReady} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'Table' }} title={t.variationTable} onClick={handlePreviewVariation} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'LineChart' }} title={t.drawGraph} text="" onClick={handlePreviewGraph} disabled={!isBBTReady} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
             </Stack>
 
             {computeResult && (
@@ -634,7 +659,7 @@ export default function App() {
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: variationTablePreview.svgString }} />
 
               <div style={{ width: "100%", marginBottom: "16px", backgroundColor: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #d1d1d1", overflowX: "auto" }}>
-                <Label style={{ fontSize: "12px", color: "#605e5c", marginBottom: "8px" }}>Bảng chỉnh sửa thủ công (nếu cần):</Label>
+                <Label style={{ fontSize: "12px", color: "#605e5c", marginBottom: "8px" }}>{t.labelVariationTable}</Label>
                 <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: '13px' }}>
                   <tbody>
                     <tr>
@@ -666,7 +691,7 @@ export default function App() {
           {/* GIAO DIỆN XEM TRƯỚC VÀ CÀI ĐẶT ĐỒ THỊ */}
           {graphPreview && (
             <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>Bản xem trước Đồ thị:</Label>
+              <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>Graph:</Label>
 
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: graphPreview.svgString }} />
 
@@ -675,9 +700,9 @@ export default function App() {
                 
                 {/* Hàng 1: Tiêu đề và Nút chọn màu */}
                 <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "8px" }}>
-                   <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>Giới hạn trục tọa độ:</Label>
+                   <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Axis limits:</Label>
                    <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
-                      <Label style={{ fontSize: "12px", color: "#605e5c", margin: 0 }}>Màu đồ thị:</Label>
+                      <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Color:</Label>
                       <input 
                           type="color" 
                           value={graphColor} 
@@ -689,18 +714,18 @@ export default function App() {
                 
                 {/* Hàng 2: Các ô nhập giới hạn X, Y */}
                 <Stack horizontal tokens={{ childrenGap: 10 }} verticalAlign="end" wrap>
-                   <TextField label="X Tối thiểu" type="number" value={graphConfig.xMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="X Tối đa" type="number" value={graphConfig.xMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="Y Tối thiểu" type="number" value={graphConfig.yMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="Y Tối đa" type="number" value={graphConfig.yMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="X Min" type="number" value={graphConfig.xMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="X Max" type="number" value={graphConfig.xMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="Y Min" type="number" value={graphConfig.yMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
+                   <TextField label="Y Max" type="number" value={graphConfig.yMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
                 </Stack>
 
                 {/* Hàng 3: Gắn tên điểm và tọa độ */}
-                <Label style={{ fontSize: "12px", color: "#605e5c", marginTop: "16px", marginBottom: "8px" }}>Gắn tọa độ điểm (Ví dụ: Cực trị):</Label>
+                <Label style={{ fontSize: "14px", color: "#605e5c", marginTop: "16px", marginBottom: "8px" }}>{t.pointLabel}</Label>
                 <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center">
-                   <TextField placeholder="Tên điểm (VD: A)" value={tempPointName} onChange={(_, v) => setTempPointName(v || "")} styles={{ root: { width: 120 } }} />
-                   <TextField placeholder="Nhập giá trị x..." value={tempPointX} onChange={(_, v) => setTempPointX(v || "")} styles={{ root: { width: 120 } }} />
-                   <DefaultButton text="Thêm điểm" onClick={handleAddAnnotation} />
+                   <TextField placeholder={t.pointInputName} value={tempPointName} onChange={(_, v) => setTempPointName(v || "")} styles={{ root: { minWidth: 120 } }} />
+                   <TextField placeholder={t.pointInputX} value={tempPointX} onChange={(_, v) => setTempPointX(v || "")} styles={{ root: { minWidth: 120 } }} />
+                   <DefaultButton text={t.pointBtn} onClick={handleAddAnnotation} styles={{ root: { minWidth: 110 } }} />
                 </Stack>
                 
                 {/* Danh sách các điểm đã thêm */}
@@ -708,8 +733,11 @@ export default function App() {
                   <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
                      {graphAnnotations.map((pt, idx) => (
                         <div key={idx} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                           {/* Hiển thị Tên(X, Y) */}
-                           {pt.name ? `${pt.name}` : ""}({Math.round(pt.x*100)/100}, {Math.round(pt.y*100)/100})
+                           
+                           {/* Dùng luôn MathLive để render công thức hiển thị cực nét */}
+                           <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                              {pt.name ? `${pt.name}\\left(${pt.latexX}; ${pt.latexY}\\right)` : `\\left(${pt.latexX}; ${pt.latexY}\\right)`}
+                           </math-field>
                            
                            <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => setGraphAnnotations(graphAnnotations.filter((_, i) => i !== idx))} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
                         </div>

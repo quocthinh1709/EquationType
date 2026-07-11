@@ -325,7 +325,8 @@ export const buildVariationTableSvg = (bbtData: any) => {
 export const buildGraphSvg = (
     evaluator: (x: number) => number, 
     config: { xMin: number, xMax: number, yMin: number, yMax: number },
-    annotations: { name: string, x: number, y: number }[], // Thêm trường name
+    //annotations: { name: string, x: number, y: number }[], // Thêm trường name
+    annotations: { name: string, x: number, y: number, latexX?: string, latexY?: string }[],
     lineColor: string = "#d13438" // Thêm tham số màu (Mặc định là đỏ)
 ) => {
     const { xMin, xMax, yMin, yMax } = config;
@@ -409,6 +410,81 @@ export const buildGraphSvg = (
     // ĐÃ ĐỔI: Dùng biến lineColor thay vì màu đỏ cố định
     svg += `<path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#graphClip)" />`;
 
+    // ===============================================================
+    // THUẬT TOÁN ĐỊNH VỊ NHÃN TỰ ĐỘNG (SMART LABEL PLACEMENT)
+    // ===============================================================
+    const findBestLabelPosition = (cx: number, cy: number, w: number, h: number) => {
+        const margin = 10;
+        // 6 vị trí ứng viên xung quanh chấm tròn
+        const candidates = [
+            { id: 'TR', x: cx + margin, y: cy - h - margin },      // Trên - Phải
+            { id: 'BR', x: cx + margin, y: cy + margin },          // Dưới - Phải
+            { id: 'TL', x: cx - w - margin, y: cy - h - margin },  // Trên - Trái
+            { id: 'BL', x: cx - w - margin, y: cy + margin },      // Dưới - Trái
+            { id: 'TC', x: cx - w/2, y: cy - h - margin - 5 },     // Trên - Giữa
+            { id: 'BC', x: cx - w/2, y: cy + margin + 5 }          // Dưới - Giữa
+        ];
+
+        let bestPos = candidates[0];
+        let minPenalty = Infinity;
+
+        for (const cand of candidates) {
+            let penalty = 0;
+            // Khung bao (Bounding box) của nhãn cộng thêm 2px lề an toàn
+            const boxL = cand.x - 2;
+            const boxR = cand.x + w + 2;
+            const boxT = cand.y - 2;
+            const boxB = cand.y + h + 2;
+
+            // 1. Phạt rất nặng nếu đâm ra ngoài SVG
+            if (boxL < P || boxR > W - P || boxT < P || boxB > H - P) penalty += 10000;
+
+            // 2. Phạt nếu đè lên Trục Ox, Oy
+            if (originX >= boxL && originX <= boxR) penalty += 500;
+            if (originY >= boxT && originY <= boxB) penalty += 500;
+            
+            // 3. Phạt nếu đè lên đường nét đứt dóng tọa độ vuông góc
+            const minY = Math.min(cy, originY);
+            const maxY = Math.max(cy, originY);
+            if (cx >= boxL && cx <= boxR && boxB >= minY && boxT <= maxY) penalty += 300;
+
+            const minX = Math.min(cx, originX);
+            const maxX = Math.max(cx, originX);
+            if (cy >= boxT && cy <= boxB && boxR >= minX && boxL <= maxX) penalty += 300;
+
+            // 4. Phạt nếu đè lên đường cong hàm số
+            let curveCollision = false;
+            for(let j = 0; j <= 5; j++) {
+                const samplePxX = boxL + (j / 5) * w;
+                const mathX = xMin + ((samplePxX - P) / (W - 2 * P)) * (xMax - xMin);
+                const mathY = evaluator(mathX);
+                if (!isNaN(mathY) && isFinite(mathY)) {
+                    const samplePxY = mapY(mathY);
+                    if (samplePxY >= boxT && samplePxY <= boxB) {
+                        curveCollision = true;
+                        break;
+                    }
+                }
+            }
+            if (curveCollision) penalty += 1000;
+
+            // 5. Mức độ ưu tiên thẩm mỹ (Ưu tiên Góc trên phải nhất)
+            if (cand.id === 'TR') penalty += 0;
+            else if (cand.id === 'BR') penalty += 10;
+            else if (cand.id === 'TL') penalty += 20;
+            else if (cand.id === 'BL') penalty += 30;
+            else penalty += 40;
+
+            if (penalty < minPenalty) {
+                minPenalty = penalty;
+                bestPos = cand;
+            }
+            if (penalty === 0) break; // Perfect match! Chốt ngay lập tức
+        }
+        return bestPos;
+    };
+
+    /*
     annotations.forEach(pt => {
         const cx = mapX(pt.x);
         const cy = mapY(pt.y);
@@ -424,6 +500,52 @@ export const buildGraphSvg = (
         const label = `${prefix}(${Math.round(pt.x*100)/100}, ${Math.round(pt.y*100)/100})`;
         
         svg += `<text x="${cx + 8}" y="${cy - 8}" font-size="22px" font-weight="bold" fill="black">${label}</text>`;
+    });
+
+    svg += `</svg>`;
+    return { svgString: svg, mathWidthEx: W/14, mathHeightEx: H/14 };
+    */
+   // 3. VẼ CÁC ĐIỂM GHI CHÚ TỌA ĐỘ
+    annotations.forEach(pt => {
+        const cx = mapX(pt.x);
+        const cy = mapY(pt.y);
+        
+        svg += `<line x1="${cx}" y1="${originY}" x2="${cx}" y2="${cy}" stroke="black" stroke-dasharray="4 4" stroke-width="1.2" />`;
+        svg += `<line x1="${originX}" y1="${cy}" x2="${cx}" y2="${cy}" stroke="black" stroke-dasharray="4 4" stroke-width="1.2" />`;
+        svg += `<circle cx="${cx}" cy="${cy}" r="4" fill="${lineColor}" />`;
+        
+        // ĐÃ SỬA: Lấy trực tiếp mã LaTeX siêu chuẩn từ Compute Engine
+        const xStr = pt.latexX || Math.round(pt.x*100)/100;
+        const yStr = pt.latexY || Math.round(pt.y*100)/100;
+        const prefix = pt.name ? `${pt.name}` : "";
+        
+        const labelLatex = `${prefix}\\left(${xStr}; ${yStr}\\right)`;
+        
+        try {
+            const mathJax = (window as any).MathJax;
+            if (mathJax && mathJax.tex2svg) {
+                const node = mathJax.tex2svg(labelLatex);
+                const mathSvg = node.querySelector("svg");
+                if (mathSvg) {
+                    const EX_TO_PX = 9; 
+                    let w = parseFloat(mathSvg.getAttribute("width") || "0") * EX_TO_PX;
+                    let h = parseFloat(mathSvg.getAttribute("height") || "0") * EX_TO_PX;
+                    
+                    // --- GỌI THUẬT TOÁN ĐỊNH VỊ TỰ ĐỘNG ---
+                    const bestPos = findBestLabelPosition(cx, cy, w, h);
+
+                    //const x = cx + 12;
+                    //const y = cy - h - 8; 
+                    
+                    let inner = mathSvg.innerHTML.replace(/currentColor/gi, "black");
+                    //svg += `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${mathSvg.getAttribute("viewBox")}">${inner}</svg>`;
+                    svg += `<svg x="${bestPos.x}" y="${bestPos.y}" width="${w}" height="${h}" viewBox="${mathSvg.getAttribute("viewBox")}">${inner}</svg>`;
+                    return; 
+                }
+            }
+        } catch (e) { console.warn("Lỗi render tên điểm đồ thị:", e); }
+
+        svg += `<text x="${cx + 8}" y="${cy - 8}" font-size="10px" font-weight="bold" fill="black">${prefix}(${xStr}; ${yStr})</text>`;
     });
 
     svg += `</svg>`;
