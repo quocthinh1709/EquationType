@@ -76,7 +76,8 @@ export const uiText = {
     pointLabel: "Gắn tọa độ điểm lên đồ thị:",
     pointBtn: "Thêm điểm",
     pointInputName: "Tên điểm (A, B,...)",
-    pointInputX: "Nhập giá trị x..."
+    pointInputX: "Nhập giá trị x...",
+    evaluateAtTitle: "Tính giá trị hàm số tại điểm (x, y...)"
   },
   en: {
     webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
@@ -137,6 +138,7 @@ export const uiText = {
     pointLabel: "Plot the point on the graph:",
     pointBtn: "Add point",
     pointInputName: "Enter name (A, B,...)",
-    pointInputX: "Enter x value"
+    pointInputX: "Enter x value",
+    evaluateAtTitle: "Evaluate the function at the point (x, y…)"
   }
 };

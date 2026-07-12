@@ -41,10 +41,16 @@ export default function App() {
   const [graphPreview, setGraphPreview] = useState<any>(null);
   const [graphConfig, setGraphConfig] = useState({ xMin: -5, xMax: 5, yMin: -5, yMax: 5 });
   //const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number}[]>([]); // Thêm 'name'
-  const [graphAnnotations, setGraphAnnotations] = useState<{name: string, x: number, y: number, latexX: string, latexY: string}[]>([]);
+  const [graphAnnotations, setGraphAnnotations] = useState<{ name: string, x: number, y: number, latexX: string, latexY: string }[]>([]);
   const [tempPointName, setTempPointName] = useState(""); // Lưu tạm chữ 'A'
   const [tempPointX, setTempPointX] = useState("");
   const [graphColor, setGraphColor] = useState("#d13438"); // Lưu màu, mặc định là đỏ sậm
+
+  // --- STATE DÀNH CHO TÍNH GIÁ TRỊ TẠI ĐIỂM (EVALUATE AT) ---
+  const [isEvalAtOpen, setIsEvalAtOpen] = useState(false);
+  const [evalAtVars, setEvalAtVars] = useState<string[]>([]);
+  const [evalAtValues, setEvalAtValues] = useState<Record<string, string>>({});
+
   // Effect tự động vẽ lại Đồ thị mỗi khi cấu hình hoặc biểu thức thay đổi
   useEffect(() => {
     if (!currentLatex || !graphPreview) return;
@@ -91,38 +97,38 @@ export default function App() {
   };
 
   const handleAddAnnotation = () => {
-     if (!tempPointX.trim()) return;
+    if (!tempPointX.trim()) return;
 
-     try {
-         // Bước A: Phân tích giá trị x người dùng nhập (vd: "1/2") thành ký hiệu toán học
-         const xExpr = ce.parse(tempPointX);
-         
-         // Bước B: Thế x vào hàm số y=f(x) hiện tại và rút gọn ra phân số/căn thức chuẩn
-         const funcExpr = ce.parse(currentLatex);
-         const yExpr = funcExpr.subs({ x: xExpr }).evaluate().simplify();
+    try {
+      // Bước A: Phân tích giá trị x người dùng nhập (vd: "1/2") thành ký hiệu toán học
+      const xExpr = ce.parse(tempPointX);
 
-         // Bước C: Tính ra số thực thập phân để định vị điểm ảnh chấm lên màn hình SVG
-         const xNumObj = xExpr.N();
-         const yNumObj = yExpr.N();
-         const xVal = typeof (xNumObj as any).numericValue === 'number' ? (xNumObj as any).numericValue : parseFloat(xNumObj.toString());
-         const yVal = typeof (yNumObj as any).numericValue === 'number' ? (yNumObj as any).numericValue : parseFloat(yNumObj.toString());
+      // Bước B: Thế x vào hàm số y=f(x) hiện tại và rút gọn ra phân số/căn thức chuẩn
+      const funcExpr = ce.parse(currentLatex);
+      const yExpr = funcExpr.subs({ x: xExpr }).evaluate().simplify();
 
-         if (isNaN(xVal) || isNaN(yVal)) return;
+      // Bước C: Tính ra số thực thập phân để định vị điểm ảnh chấm lên màn hình SVG
+      const xNumObj = xExpr.N();
+      const yNumObj = yExpr.N();
+      const xVal = typeof (xNumObj as any).numericValue === 'number' ? (xNumObj as any).numericValue : parseFloat(xNumObj.toString());
+      const yVal = typeof (yNumObj as any).numericValue === 'number' ? (yNumObj as any).numericValue : parseFloat(yNumObj.toString());
 
-         // Lưu lại cả tọa độ màn hình (x,y) và tọa độ ký hiệu (latexX, latexY)
-         setGraphAnnotations([...graphAnnotations, { 
-             name: tempPointName.trim(), 
-             x: xVal, 
-             y: yVal,
-             latexX: xExpr.latex, // Lấy nguyên gốc mã phân số của x
-             latexY: yExpr.latex  // Lấy phân số / căn thức của y
-         }]);
-         
-         setTempPointX("");
-         setTempPointName("");
-     } catch (e) {
-         console.error("Lỗi lấy tọa độ điểm:", e);
-     }
+      if (isNaN(xVal) || isNaN(yVal)) return;
+
+      // Lưu lại cả tọa độ màn hình (x,y) và tọa độ ký hiệu (latexX, latexY)
+      setGraphAnnotations([...graphAnnotations, {
+        name: tempPointName.trim(),
+        x: xVal,
+        y: yVal,
+        latexX: xExpr.latex, // Lấy nguyên gốc mã phân số của x
+        latexY: yExpr.latex  // Lấy phân số / căn thức của y
+      }]);
+
+      setTempPointX("");
+      setTempPointName("");
+    } catch (e) {
+      console.error("Lỗi lấy tọa độ điểm:", e);
+    }
   };
 
 
@@ -264,6 +270,69 @@ export default function App() {
       }
       setComputeResult(resultLatex);
     } catch (error) { setComputeResult("t.computeError"); }
+  };
+
+
+  // Quét biến và mở Dialog
+  const handleOpenEvalAt = () => {
+    if (!currentLatex) return;
+    try {
+      const expr = ce.parse(currentLatex);
+      // Lấy danh sách các biến chưa biết (unknowns)
+      let vars: string[] = (expr.unknowns && expr.unknowns.length > 0) ? [...expr.unknowns] : [];
+
+      // Fallback: nếu ComputeEngine không tự nhận diện được, ta quét thủ công chuỗi latex
+      if (vars.length === 0) {
+        if (currentLatex.includes("x")) vars.push("x");
+        if (currentLatex.includes("y")) vars.push("y");
+        if (currentLatex.includes("z")) vars.push("z");
+        if (currentLatex.includes("t")) vars.push("t");
+      }
+
+      if (vars.length > 0) {
+        // Loại bỏ các biến trùng lặp nếu có
+        vars = Array.from(new Set(vars));
+        setEvalAtVars(vars);
+
+        // Khởi tạo object rỗng cho các giá trị nhập
+        const initialVals: Record<string, string> = {};
+        vars.forEach(v => initialVals[v] = "");
+        setEvalAtValues(initialVals);
+
+        setIsEvalAtOpen(true);
+      } else {
+        // Nếu không có biến nào, gọi hàm evaluate bình thường
+        handleCompute("evaluate");
+      }
+    } catch (e) {
+      setStatusMessage({ text: "Không thể phân tích biểu thức để tìm biến.", type: MessageBarType.error });
+    }
+  };
+
+  // Thực hiện thế biến và tính toán
+  const handleComputeEvalAt = () => {
+    if (!currentLatex) return;
+    try {
+      const expr = ce.parse(currentLatex);
+      const subs: Record<string, any> = {};
+
+      // Lắp ghép các giá trị người dùng đã nhập thành object substitution
+      evalAtVars.forEach(v => {
+        if (evalAtValues[v]) {
+          // Parse giá trị nhập vào (hỗ trợ nhập cả phân số như 1/2)
+          subs[v] = ce.parse(evalAtValues[v]);
+        }
+      });
+
+      // Thực hiện thế (subs) và tính toán (evaluate)
+      const resultExpr = expr.subs(subs).evaluate();
+
+      // Hiển thị kết quả ra màn hình chính
+      setComputeResult(resultExpr.latex);
+      setIsEvalAtOpen(false);
+    } catch (e) {
+      setStatusMessage({ text: "Lỗi trong quá trình tính toán giá trị.", type: MessageBarType.error });
+    }
   };
 
   const handleInsertComputeResult = () => {
@@ -620,7 +689,13 @@ export default function App() {
             <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", padding: 0 }}>{t.computeLabel}</Label>
             <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginBottom: "0px", marginTop: "8px" }}>
               {/* <DefaultButton iconProps={{ iconName: 'Calculator' }} text={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} /> */}
-              <DefaultButton iconProps={{ iconName: 'Calculator' }} title={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'CalculatorEqualTo' }} title={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton
+                iconProps={{ iconName: 'Calculator' }}
+                title={t.evaluateAtTitle}
+                onClick={handleOpenEvalAt}
+                style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }}
+              />
               <DefaultButton iconProps={{ iconName: 'MergeDuplicate' }} title={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'ExploreContentSingle' }} title={t.expand} onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'ExploreContent' }} title={t.expandAll} onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
@@ -697,51 +772,51 @@ export default function App() {
 
               {/* BẢNG CÀI ĐẶT TRỤC OXY VÀ MÀU SẮC */}
               <div style={{ width: "100%", marginBottom: "16px", backgroundColor: "#ffffff", padding: "12px", borderRadius: "8px", border: "1px solid #d1d1d1" }}>
-                
+
                 {/* Hàng 1: Tiêu đề và Nút chọn màu */}
                 <Stack horizontal horizontalAlign="space-between" verticalAlign="center" style={{ marginBottom: "8px" }}>
-                   <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Axis limits:</Label>
-                   <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
-                      <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Color:</Label>
-                      <input 
-                          type="color" 
-                          value={graphColor} 
-                          onChange={(e) => setGraphColor(e.target.value)} 
-                          style={{ width: "24px", height: "24px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }} 
-                      />
-                   </Stack>
+                  <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Axis limits:</Label>
+                  <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 8 }}>
+                    <Label style={{ fontSize: "14px", color: "#605e5c", margin: 0 }}>Color:</Label>
+                    <input
+                      type="color"
+                      value={graphColor}
+                      onChange={(e) => setGraphColor(e.target.value)}
+                      style={{ width: "24px", height: "24px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }}
+                    />
+                  </Stack>
                 </Stack>
-                
+
                 {/* Hàng 2: Các ô nhập giới hạn X, Y */}
                 <Stack horizontal tokens={{ childrenGap: 10 }} verticalAlign="end" wrap>
-                   <TextField label="X Min" type="number" value={graphConfig.xMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="X Max" type="number" value={graphConfig.xMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, xMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="Y Min" type="number" value={graphConfig.yMin.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMin: parseFloat(v || "-5")})} styles={{ root: { width: 80 } }} />
-                   <TextField label="Y Max" type="number" value={graphConfig.yMax.toString()} onChange={(_, v) => setGraphConfig({...graphConfig, yMax: parseFloat(v || "5")})} styles={{ root: { width: 80 } }} />
+                  <TextField label="X Min" type="number" value={graphConfig.xMin.toString()} onChange={(_, v) => setGraphConfig({ ...graphConfig, xMin: parseFloat(v || "-5") })} styles={{ root: { width: 80 } }} />
+                  <TextField label="X Max" type="number" value={graphConfig.xMax.toString()} onChange={(_, v) => setGraphConfig({ ...graphConfig, xMax: parseFloat(v || "5") })} styles={{ root: { width: 80 } }} />
+                  <TextField label="Y Min" type="number" value={graphConfig.yMin.toString()} onChange={(_, v) => setGraphConfig({ ...graphConfig, yMin: parseFloat(v || "-5") })} styles={{ root: { width: 80 } }} />
+                  <TextField label="Y Max" type="number" value={graphConfig.yMax.toString()} onChange={(_, v) => setGraphConfig({ ...graphConfig, yMax: parseFloat(v || "5") })} styles={{ root: { width: 80 } }} />
                 </Stack>
 
                 {/* Hàng 3: Gắn tên điểm và tọa độ */}
                 <Label style={{ fontSize: "14px", color: "#605e5c", marginTop: "16px", marginBottom: "8px" }}>{t.pointLabel}</Label>
                 <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center">
-                   <TextField placeholder={t.pointInputName} value={tempPointName} onChange={(_, v) => setTempPointName(v || "")} styles={{ root: { minWidth: 120 } }} />
-                   <TextField placeholder={t.pointInputX} value={tempPointX} onChange={(_, v) => setTempPointX(v || "")} styles={{ root: { minWidth: 120 } }} />
-                   <DefaultButton text={t.pointBtn} onClick={handleAddAnnotation} styles={{ root: { minWidth: 110 } }} />
+                  <TextField placeholder={t.pointInputName} value={tempPointName} onChange={(_, v) => setTempPointName(v || "")} styles={{ root: { minWidth: 120 } }} />
+                  <TextField placeholder={t.pointInputX} value={tempPointX} onChange={(_, v) => setTempPointX(v || "")} styles={{ root: { minWidth: 120 } }} />
+                  <DefaultButton text={t.pointBtn} onClick={handleAddAnnotation} styles={{ root: { minWidth: 110 } }} />
                 </Stack>
-                
+
                 {/* Danh sách các điểm đã thêm */}
                 {graphAnnotations.length > 0 && (
                   <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                     {graphAnnotations.map((pt, idx) => (
-                        <div key={idx} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                           
-                           {/* Dùng luôn MathLive để render công thức hiển thị cực nét */}
-                           <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
-                              {pt.name ? `${pt.name}\\left(${pt.latexX}; ${pt.latexY}\\right)` : `\\left(${pt.latexX}; ${pt.latexY}\\right)`}
-                           </math-field>
-                           
-                           <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => setGraphAnnotations(graphAnnotations.filter((_, i) => i !== idx))} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
-                        </div>
-                     ))}
+                    {graphAnnotations.map((pt, idx) => (
+                      <div key={idx} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+
+                        {/* Dùng luôn MathLive để render công thức hiển thị cực nét */}
+                        <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                          {pt.name ? `${pt.name}\\left(${pt.latexX}; ${pt.latexY}\\right)` : `\\left(${pt.latexX}; ${pt.latexY}\\right)`}
+                        </math-field>
+
+                        <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => setGraphAnnotations(graphAnnotations.filter((_, i) => i !== idx))} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -757,6 +832,35 @@ export default function App() {
             <DialogFooter>
               <PrimaryButton onClick={handleSaveToDict} text={t.saveBtn} />
               <DefaultButton onClick={() => setIsAddDictOpen(false)} text={t.cancelBtn} />
+            </DialogFooter>
+          </Dialog>
+
+          {/* DIALOG NHẬP GIÁ TRỊ BIẾN TÍNH TOÁN */}
+          <Dialog
+            hidden={!isEvalAtOpen}
+            onDismiss={() => setIsEvalAtOpen(false)}
+            dialogContentProps={{
+              type: DialogType.normal,
+              title: "Evaluate the function at the point",
+              subText: "Enter the value of the variable:"
+            }}
+          >
+            <Stack tokens={{ childrenGap: 12 }} style={{ marginTop: "10px" }}>
+              {evalAtVars.map(v => (
+                <Stack key={v} horizontal verticalAlign="center" tokens={{ childrenGap: 10 }}>
+                  <Label style={{ width: "30px", fontSize: "16px", fontStyle: "italic", textAlign: "right" }}>{v} =</Label>
+                  <TextField
+                    placeholder={`Ex: 2 or 1/2, \\sqrt(2)`}
+                    value={evalAtValues[v]}
+                    onChange={(_, val) => setEvalAtValues({ ...evalAtValues, [v]: val || "" })}
+                    styles={{ root: { flexGrow: 1 } }}
+                  />
+                </Stack>
+              ))}
+            </Stack>
+            <DialogFooter>
+              <PrimaryButton onClick={handleComputeEvalAt} text="Calculate" />
+              <DefaultButton onClick={() => setIsEvalAtOpen(false)} text="Cancel" />
             </DialogFooter>
           </Dialog>
 
