@@ -621,7 +621,7 @@ export default function App() {
             <Stack horizontal wrap tokens={{ childrenGap: 2 }} style={{ marginBottom: "0px", marginTop: "8px" }}>
               {/* <DefaultButton iconProps={{ iconName: 'Calculator' }} text={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "100px", borderRadius: "6px" }} /> */}
               <DefaultButton iconProps={{ iconName: 'Calculator' }} title={t.evaluate} onClick={() => handleCompute("evaluate")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
-              <DefaultButton iconProps={{ iconName: 'Broom' }} title={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
+              <DefaultButton iconProps={{ iconName: 'MergeDuplicate' }} title={t.simplify} onClick={() => handleCompute("simplify")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'ExploreContentSingle' }} title={t.expand} onClick={() => handleCompute("expand")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'ExploreContent' }} title={t.expandAll} onClick={() => handleCompute("expandAll")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
               <DefaultButton iconProps={{ iconName: 'SplitObject' }} title={t.factor} onClick={() => handleCompute("factor")} style={{ padding: "0px 5px", minWidth: "50px", borderRadius: "6px" }} />
