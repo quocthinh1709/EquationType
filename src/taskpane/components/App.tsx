@@ -27,6 +27,22 @@ export default function App() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mathfieldRef = useRef<MathfieldElement | null>(null);
   const lastEqIdRef = useRef<string>("");
+
+  // --- REFS ĐỂ AUTO-SCROLL ĐẾN VÙNG KẾT QUẢ ---
+  const computeResultRef = useRef<HTMLDivElement>(null);
+  const graphPreviewRef = useRef<HTMLDivElement>(null);
+  const bbtPreviewRef = useRef<HTMLDivElement>(null);
+  const verticalMathRef = useRef<HTMLDivElement>(null);
+  // Hàm helper để cuộn mượt mà
+  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
+    setTimeout(() => {
+      if (ref.current) {
+        ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 150); // Độ trễ nhỏ chờ React render giao diện xong
+  };
+
+
   const [currentLatex, setCurrentLatex] = useState("");
 
   const [insertMode, setInsertMode] = useState<string>(() => localStorage.getItem("math_insert_mode") || "mathml");
@@ -70,6 +86,7 @@ export default function App() {
       const evaluator = createGraphEvaluator(currentLatex, ce);
       const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor);
       setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+      scrollToRef(graphPreviewRef); // Thêm dòng này
     } catch (e) {
       setGraphPreview(null);
     }
@@ -269,6 +286,7 @@ export default function App() {
           break;
       }
       setComputeResult(resultLatex);
+      scrollToRef(computeResultRef); // Cuộn đến vùng kết quả tính toán
     } catch (error) { setComputeResult("t.computeError"); }
   };
 
@@ -330,6 +348,7 @@ export default function App() {
       // Hiển thị kết quả ra màn hình chính
       setComputeResult(resultExpr.latex);
       setIsEvalAtOpen(false);
+      scrollToRef(computeResultRef); // Cuộn đến vùng kết quả tính toán
     } catch (e) {
       setStatusMessage({ text: "Lỗi trong quá trình tính toán giá trị.", type: MessageBarType.error });
     }
@@ -495,7 +514,10 @@ export default function App() {
     if (bieuThuc.includes('y=') || bieuThuc.includes('f(x)=')) { setVerticalMathPreview(null); return; }
 
     const preview = buildVerticalMathPreview(bieuThuc);
-    if (preview) setVerticalMathPreview(preview);
+    if (preview) {
+      setVerticalMathPreview(preview);
+      scrollToRef(verticalMathRef); // Thêm dòng này
+    }
     else {
       setStatusMessage({ text: "Vui lòng nhập phép tính +, -, *, / cơ bản để xem tính dọc.", type: MessageBarType.warning });
       setVerticalMathPreview(null);
@@ -508,6 +530,7 @@ export default function App() {
     try {
       const cols = calculateVariationTableData(latex, ce);
       setBbtData({ cols, bieuThuc: latex, labels: { x: "x", yPrime: "y'", y: "y" } });
+      scrollToRef(bbtPreviewRef); // Thêm dòng này
     } catch (err) {
       console.error("Lỗi vẽ BBT:", err);
       setVariationTablePreview(null);
@@ -710,18 +733,20 @@ export default function App() {
             </Stack>
 
             {computeResult && (
-              <Stack tokens={{ childrenGap: 8 }} style={{ marginTop: "16px", borderTop: "1px dashed #c8c6c4", paddingTop: "12px" }}>
+              <div ref={computeResultRef}>
+              <Stack  tokens={{ childrenGap: 8 }} style={{ marginTop: "16px", borderTop: "1px dashed #c8c6c4", paddingTop: "12px" }}>
                 <Label style={{ color: "#605e5c", margin: 0 }}>{t.resultLabel}</Label>
                 <div style={{ padding: "10px", backgroundColor: "white", borderRadius: "4px", fontSize: "22px", minHeight: "50px" }}>
                   <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none" }}>{computeResult}</math-field>
                 </div>
                 <PrimaryButton text={t.insertToWord} iconProps={{ iconName: 'Add' }} onClick={handleInsertComputeResult} style={{ backgroundColor: "#0078d4", borderColor: "transparent", color: "white", width: "fit-content", marginTop: "10px", borderRadius: "6px" }} />
               </Stack>
+              </div>
             )}
           </div>
 
           {verticalMathPreview && (
-            <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div ref={verticalMathRef} style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>{t.previewVertical}</Label>
               <div style={{ backgroundColor: "white", padding: "16px", borderRadius: "8px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0" }} dangerouslySetInnerHTML={{ __html: verticalMathPreview.svgString }} />
               <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "CalculatorAddition" }} onClick={handleInsertVerticalMath} style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
@@ -729,7 +754,7 @@ export default function App() {
           )}
 
           {variationTablePreview && bbtData && (
-            <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div ref={bbtPreviewRef} style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>{t.previewVariation}</Label>
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: variationTablePreview.svgString }} />
 
@@ -765,7 +790,7 @@ export default function App() {
 
           {/* GIAO DIỆN XEM TRƯỚC VÀ CÀI ĐẶT ĐỒ THỊ */}
           {graphPreview && (
-            <div style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div ref={graphPreviewRef} style={{ marginTop: "4px", padding: "16px", backgroundColor: "#f3f2f1", borderRadius: "6px", border: "1px solid #e1dfdd", display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Label style={{ fontWeight: "bold", color: "#107c41", fontSize: "14px", alignSelf: "flex-start" }}>Graph:</Label>
 
               <div style={{ backgroundColor: "white", padding: "10px", borderRadius: "8px", width: "100%", boxShadow: "0 2px 8px rgba(0,0,0,0.1)", margin: "12px 0", overflowX: "auto", textAlign: 'center' }} dangerouslySetInnerHTML={{ __html: graphPreview.svgString }} />
