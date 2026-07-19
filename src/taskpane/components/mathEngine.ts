@@ -24,7 +24,7 @@ const getNum = (exprNode: any) => {
   return isNaN(p) ? NaN : p;
 };
 
-const toNiceFraction = (x: number, tol = 1e-5, maxDen = 50): [number, number] | null => {
+const toNiceFraction = (x: number, tol = 1e-6, maxDen = 50): [number, number] | null => {
   if (!isFinite(x)) return null;
   const sign = x < 0 ? -1 : 1;
   let ax = Math.abs(x);
@@ -55,7 +55,7 @@ const extractSquareFactor = (k: number): [number, number] => {
   return [m, rem];
 };
 
-const toNiceSqrtV2 = (ax: number, tol = 1e-5, maxDen = 50): { p: number; q: number; n: number } | null => {
+const toNiceSqrtV2 = (ax: number, tol = 1e-6, maxDen = 50): { p: number; q: number; n: number } | null => {
   if (ax < 1e-9) return null;
   const r = ax * ax;
   const frac = toNiceFraction(r, tol, maxDen);
@@ -165,9 +165,7 @@ const lookupNice = (
     let bestError = Infinity;
 
     for (const item of KNOWN_VALUES) {
-
         const err = Math.abs(ax - item.value);
-
         if (
             err <= tolerance &&
             err < bestError
@@ -192,13 +190,13 @@ const niceNumber = (x: number): string => {
         return x > 0 ? "+\\infty" : "-\\infty";
     }
 
-    const known = lookupNice(x, 1e-5);
+    const known = lookupNice(x, 1e-6);
 
     if (known) {
         return known;
     }
 
-    if (Math.abs(x - Math.round(x)) < 1e-5) {
+    if (Math.abs(x - Math.round(x)) < 1e-6) {
         return String(Math.round(x));
     }
 
@@ -214,7 +212,7 @@ const niceNumber = (x: number): string => {
         return `${sign}\\frac{${Math.abs(p)}}{${q}}`;
     }
 
-    const sq = toNiceSqrtV2(Math.abs(x), 1e-5);
+    const sq = toNiceSqrtV2(Math.abs(x), 1e-6);
 
     if (sq) {
 
@@ -305,7 +303,7 @@ export const calculateVariationTableData = (latex: string, ce: any) => {
 
     let mergedDenom: number[] = [...solveRootsDenom];
     numericRootsDenom.forEach(nr => {
-      if (!mergedDenom.some(r => Math.abs(r - nr) < 1e-5)) mergedDenom.push(nr);
+      if (!mergedDenom.some(r => Math.abs(r - nr) < 1e-6)) mergedDenom.push(nr);
     });
     rawDiscontinuities.push(...mergedDenom);
   }
@@ -325,7 +323,7 @@ export const calculateVariationTableData = (latex: string, ce: any) => {
 
   let rawRoots: number[] = [...solveRoots];
   numericRoots.forEach(nr => {
-    if (!rawRoots.some(r => Math.abs(r - nr) < 1e-5)) rawRoots.push(nr);
+    if (!rawRoots.some(r => Math.abs(r - nr) < 1e-6)) rawRoots.push(nr);
   });
 
   let allPoints = [...rawRoots, ...rawDiscontinuities].sort((a, b) => a - b);

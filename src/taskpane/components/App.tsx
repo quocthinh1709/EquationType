@@ -418,27 +418,68 @@ export default function App() {
         const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
 
         if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
-          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current); oldControls.load("items"); await context.sync();
+          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current); 
+          oldControls.load("items"); 
+          await context.sync();
           if (oldControls.items.length > 0) {
-            const oldCC = oldControls.items[0]; const oldRange = oldCC.getRange(); const oldPics = oldRange.inlinePictures; oldPics.load("items"); oldRange.load("text"); await context.sync();
+            const oldCC = oldControls.items[0]; 
+            const oldRange = oldCC.getRange(); 
+            const oldPics = oldRange.inlinePictures; 
+            oldPics.load("items"); 
+       
+            oldRange.load("text"); 
+            
+            await context.sync();
             const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
-            const rawText = oldRange.text; const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            const rawText = oldRange.text; 
+            const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
+            const isPlaceholderOrEmpty = (rawText === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
+            console.info("Placeholder"+isPlaceholderOrEmpty);
             let isOldEmptied = false;
-            if (oldEqType === "SVG") { if (oldPics.items.length === 0) isOldEmptied = true; } else { if (rawText === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản")) isOldEmptied = true; }
-            if (isOldEmptied) { oldCC.delete(false); await context.sync(); }
+            if (oldEqType === "SVG") { 
+              if (oldPics.items.length === 0 && isPlaceholderOrEmpty) 
+                isOldEmptied = true; 
+              } else { 
+                if (isPlaceholderOrEmpty) 
+                  isOldEmptied = true; 
+
+              }
+            if (isOldEmptied) { 
+              oldRange.insertText("", Word.InsertLocation.replace);
+              oldCC.delete(true); 
+              await context.sync(); 
+            }
           }
         }
 
         if (newFullTag) {
-          lastEqIdRef.current = newFullTag; let isEmptied = false;
+          lastEqIdRef.current = newFullTag; 
+          let isEmptied = false;
+          let isPlaceholderOrEmpty = false;
+          let ccRange: Word.Range | null = null;
           if (newTargetCC) {
-            const ccRange = newTargetCC.getRange(); const ccPics = ccRange.inlinePictures; ccPics.load("items"); ccRange.load("text"); await context.sync();
+            ccRange = newTargetCC.getRange(); 
+            const ccPics = ccRange.inlinePictures; 
+            ccPics.load("items"); 
+            ccRange.load("text"); 
+            await context.sync();
             const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
-            isEmptied = newEqType === "SVG" ? ccPics.items.length === 0 : (ccRange.text === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
+            isPlaceholderOrEmpty = (ccRange.text === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
+            //isEmptied = newEqType === "SVG" ? ccPics.items.length === 0 : (ccRange.text === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
+            if (newEqType === "SVG") {
+              // Phải vừa mất ảnh, vừa chỉ còn lại Placeholder thì mới dọn
+              isEmptied = (ccPics.items.length === 0 && isPlaceholderOrEmpty);
+            } else {
+              isEmptied = isPlaceholderOrEmpty;
+            }
           }
           if (isEmptied && newTargetCC) {
             if (mathfieldRef.current) mathfieldRef.current.value = "";
-            setCurrentLatex(""); lastEqIdRef.current = ""; newTargetCC.delete(false); await context.sync();
+            setCurrentLatex(""); 
+            lastEqIdRef.current = ""; 
+            if (isPlaceholderOrEmpty) ccRange.insertText("", Word.InsertLocation.replace);
+            newTargetCC.delete(true); 
+            await context.sync();
           } else {
             const latexCode = Office.context.document.settings.get(newEqId);
             if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) { mathfieldRef.current.value = latexCode; setCurrentLatex(latexCode); }

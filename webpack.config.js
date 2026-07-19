@@ -16,7 +16,8 @@ async function getHttpsOptions() {
 module.exports = async (env, options) => {
   const dev = options.mode === "development";
   const config = {
-    devtool: "source-map",
+    //devtool: "source-map",
+    devtool: env.WEBPACK_BUILD ? false : "source-map",
     entry: {
       polyfill: ["core-js/stable", "regenerator-runtime/runtime"],
       react: ["react", "react-dom"],
