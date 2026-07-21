@@ -399,19 +399,73 @@ export default function App() {
     try {
       await Word.run(async (context) => {
         const range = context.document.getSelection();
-        const cc = range.parentContentControlOrNullObject; cc.load("title, tag");
-        const ccs = range.contentControls; ccs.load("items/title, items/tag");
-        const pics = range.inlinePictures; pics.load("items/altTextDescription");
+        const cc = range.parentContentControlOrNullObject; 
+        cc.load("title, tag");
+        const ccs = range.contentControls; 
+        ccs.load("items/title, items/tag");
+        const pics = range.inlinePictures; 
+        //pics.load("items/altTextDescription");
+        pics.load("items/altTextDescription, items/altTextTitle");
+        // Tải toàn bộ XML thô để làm Tầng quét số 3
+        const ooxml = range.getOoxml();
+
         await context.sync();
 
         let newFullTag = "";
         let newTargetCC: Word.ContentControl | null = null;
-
-        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") { newFullTag = ccs.items[0].tag; newTargetCC = ccs.items[0]; }
-        else if (!cc.isNullObject && cc.title === "LSTS_Math") { newFullTag = cc.tag; newTargetCC = cc; }
+        let latexFromAltTextOrXml = ""; // Biến lưu trữ LaTeX mới lấy được
+        /*
+        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") { 
+          newFullTag = ccs.items[0].tag; 
+          newTargetCC = ccs.items[0]; 
+        }
+        else if (!cc.isNullObject && cc.title === "LSTS_Math") { 
+          newFullTag = cc.tag; 
+          newTargetCC = cc; 
+        }
         else if (pics.items.length > 0 && pics.items[0].altTextDescription && pics.items[0].altTextDescription.includes("#[ID:")) {
           const match = pics.items[0].altTextDescription.match(/#\[ID:(.*?)\]/);
           if (match && match[1]) newFullTag = match[1];
+        }
+          */
+
+        // TẦNG 1: Quét Content Control (Sản phẩm chuẩn của E-Editor)
+        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") { 
+            newFullTag = ccs.items[0].tag; 
+            newTargetCC = ccs.items[0]; 
+        }
+        else if (!cc.isNullObject && cc.title === "LSTS_Math") { 
+            newFullTag = cc.tag; 
+            newTargetCC = cc; 
+        }
+        // TẦNG 2: Quét Ảnh Hiện Đại (Sản phẩm sau khi Check Compatibility)
+        else if (pics.items.length > 0) {
+            const altDesc = pics.items[0].altTextDescription || pics.items[0].altTextTitle || "";
+            if (altDesc.includes("#[ID:")) {
+                const matchTag = altDesc.match(/#\[ID:(.*?)\]/);
+                if (matchTag && matchTag[1]) newFullTag = matchTag[1];
+                
+                // Moi LaTeX ra từ Alt Text luôn
+                const matchLatex = altDesc.match(/Math:\s*(.*?)\s*#\[ID:/);
+                if (matchLatex && matchLatex[1]) latexFromAltTextOrXml = matchLatex[1].trim();
+            }
+        }
+
+        // TẦNG 3: Quét XML Thô (Sản phẩm nguyên gốc từ Python chưa Convert)
+        if (!newFullTag && ooxml.value) {
+            // Regex quét xuyên thấu mã XML
+            const rawMatch = ooxml.value.match(/Math:\s*(.*?)\s*#\[ID:([^\|\]]+)/);
+            if (rawMatch && rawMatch[1] && rawMatch[2]) {
+                let rawLatex = rawMatch[1].trim();
+                // Giải mã các ký tự XML
+                rawLatex = rawLatex.replace(/&amp;/g, '&')
+                                   .replace(/&lt;/g, '<')
+                                   .replace(/&gt;/g, '>')
+                                   .replace(/&quot;/g, '"');
+                
+                latexFromAltTextOrXml = rawLatex;
+                newFullTag = rawMatch[2] + "|SVG"; // Dựng lại tag để lừa Add-in xử lý tiếp
+            }
         }
 
         const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
@@ -480,9 +534,27 @@ export default function App() {
             if (isPlaceholderOrEmpty) ccRange.insertText("", Word.InsertLocation.replace);
             newTargetCC.delete(true); 
             await context.sync();
-          } else {
+          } 
+          else {
+            /*
             const latexCode = Office.context.document.settings.get(newEqId);
-            if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) { mathfieldRef.current.value = latexCode; setCurrentLatex(latexCode); }
+            if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) { 
+              mathfieldRef.current.value = latexCode; 
+              setCurrentLatex(latexCode); 
+            }
+              */
+            let latexCode = latexFromAltTextOrXml || Office.context.document.settings.get(newEqId);
+            
+            if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) { 
+                mathfieldRef.current.value = latexCode; 
+                setCurrentLatex(latexCode); 
+                
+                // Đồng bộ hóa: Lưu ngược lại mã này vào Settings để lần sau truy cập siêu tốc
+                if (latexFromAltTextOrXml) {
+                    Office.context.document.settings.set(newEqId, latexFromAltTextOrXml);
+                    Office.context.document.settings.saveAsync();
+                }
+            }
           }
         } else lastEqIdRef.current = "";
       });
