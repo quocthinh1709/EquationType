@@ -107,7 +107,7 @@ export default function App() {
         picture.width = mathWidthEx * exToPt; picture.height = mathHeightEx * exToPt; picture.lockAspectRatio = true;
         picture.altTextTitle = "Graph"; picture.altTextDescription = `Math: ${bieuThuc} #[ID:${eqId}|SVG]`;
         const newCc = picture.getRange().insertContentControl();
-        newCc.title = "LSTS_Math"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
+        newCc.title = "Etype"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
         await context.sync();
       });
     } catch (err) { console.error("Lỗi chèn Đồ thị: ", err); }
@@ -415,11 +415,11 @@ export default function App() {
         let newTargetCC: Word.ContentControl | null = null;
         let latexFromAltTextOrXml = ""; // Biến lưu trữ LaTeX mới lấy được
         /*
-        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") { 
+        if (ccs.items.length > 0 && ccs.items[0].title === "Etype") { 
           newFullTag = ccs.items[0].tag; 
           newTargetCC = ccs.items[0]; 
         }
-        else if (!cc.isNullObject && cc.title === "LSTS_Math") { 
+        else if (!cc.isNullObject && cc.title === "Etype") { 
           newFullTag = cc.tag; 
           newTargetCC = cc; 
         }
@@ -430,11 +430,11 @@ export default function App() {
           */
 
         // TẦNG 1: Quét Content Control (Sản phẩm chuẩn của E-Editor)
-        if (ccs.items.length > 0 && ccs.items[0].title === "LSTS_Math") { 
+        if (ccs.items.length > 0 && (ccs.items[0].title === "Etype" || ccs.items[0].title === "LSTS_Math")) { 
             newFullTag = ccs.items[0].tag; 
             newTargetCC = ccs.items[0]; 
         }
-        else if (!cc.isNullObject && cc.title === "LSTS_Math") { 
+        else if (!cc.isNullObject && (cc.title === "Etype" || cc.title === "LSTS_Math")) { 
             newFullTag = cc.tag; 
             newTargetCC = cc; 
         }
@@ -609,11 +609,11 @@ export default function App() {
           const picRange = picture.getRange();
           picRange.font.position = verticalAlignEx !== 0 ? verticalAlignEx * exToPt : 0;
           const newCc = picRange.insertContentControl();
-          newCc.title = "LSTS_Math"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
+          newCc.title = "Etype"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
         } else {
           const insertedRange = range.insertHtml(insertContent, Word.InsertLocation.replace);
           const newCc = insertedRange.insertContentControl();
-          newCc.title = "LSTS_Math"; newCc.tag = eqId + "|MML"; newCc.appearance = Word.ContentControlAppearance.hidden;
+          newCc.title = "Etype"; newCc.tag = eqId + "|MML"; newCc.appearance = Word.ContentControlAppearance.hidden;
         }
         await context.sync();
       });
@@ -664,7 +664,7 @@ export default function App() {
         picture.width = mathWidthEx * exToPt; picture.height = mathHeightEx * exToPt; picture.lockAspectRatio = true;
         picture.altTextTitle = "Math Formula"; picture.altTextDescription = `Math: ${bieuThuc} #[ID:${eqId}|SVG]`;
         const newCc = picture.getRange().insertContentControl();
-        newCc.title = "LSTS_Math"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
+        newCc.title = "Etype"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
         await context.sync();
       });
     } catch (err) { console.error("Lỗi chèn tính dọc: ", err); }
@@ -684,7 +684,7 @@ export default function App() {
         picture.width = mathWidthEx * exToPt; picture.height = mathHeightEx * exToPt; picture.lockAspectRatio = true;
         picture.altTextTitle = "Variation Table"; picture.altTextDescription = `Math: ${bieuThuc} #[ID:${eqId}|SVG]`;
         const newCc = picture.getRange().insertContentControl();
-        newCc.title = "LSTS_Math"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
+        newCc.title = "Etype"; newCc.tag = eqId + "|SVG"; newCc.appearance = Word.ContentControlAppearance.hidden;
         await context.sync();
       });
     } catch (err) { console.error("Lỗi chèn BBT: ", err); }
