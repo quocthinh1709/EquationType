@@ -327,7 +327,11 @@ export const buildGraphSvg = (
     config: { xMin: number, xMax: number, yMin: number, yMax: number },
     //annotations: { name: string, x: number, y: number }[], // Thêm trường name
     annotations: { name: string, x: number, y: number, latexX?: string, latexY?: string }[],
-    lineColor: string = "#d13438" // Thêm tham số màu (Mặc định là đỏ)
+    lineColor: string = "#d13438", // Thêm tham số màu (Mặc định là đỏ)
+
+    // --- Text ---
+    texts: { content: string, x: number, y: number }[] = [], 
+    asymptotes: { type: 'vertical' | 'horizontal', value: number, color?: string }[] = []
 ) => {
     const { xMin, xMax, yMin, yMax } = config;
     const W = 600; 
@@ -371,6 +375,18 @@ export const buildGraphSvg = (
             }
         }
     }
+
+    // --- VẼ TIỆM CẬN ---
+    asymptotes.forEach(asym => {
+        const asymColor = asym.color || "#0078d4";
+        if (asym.type === 'vertical') {
+            const cx = mapX(asym.value);
+            svg += `<line x1="${cx}" y1="${P}" x2="${cx}" y2="${H-P}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="1.5" clip-path="url(#graphClip)" />`;
+        } else if (asym.type === 'horizontal') {
+            const cy = mapY(asym.value);
+            svg += `<line x1="${P}" y1="${cy}" x2="${W-P}" y2="${cy}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="1.5" clip-path="url(#graphClip)" />`;
+        }
+    });
 
     const originY = Math.max(P, Math.min(H - P, mapY(0)));
     svg += `<line x1="${P/2}" y1="${originY}" x2="${W - P/2}" y2="${originY}" stroke="${axisColor}" stroke-width="1.5" marker-end="url(#axis-arrow)" />`;
@@ -546,6 +562,29 @@ export const buildGraphSvg = (
         } catch (e) { console.warn("Lỗi render tên điểm đồ thị:", e); }
 
         svg += `<text x="${cx + 8}" y="${cy - 8}" font-size="10px" font-weight="bold" fill="black">${prefix}(${xStr}; ${yStr})</text>`;
+    });
+
+
+    // --- CHÈN THÊM ĐOẠN NÀY ĐỂ VẼ TEXT ---
+    texts.forEach(txt => {
+        const cx = mapX(txt.x);
+        const cy = mapY(txt.y);
+        try {
+            const mathJax = (window as any).MathJax;
+            if (mathJax && mathJax.tex2svg) {
+                const node = mathJax.tex2svg(txt.content);
+                const mathSvg = node.querySelector("svg");
+                if (mathSvg) {
+                    const EX_TO_PX = 10; 
+                    let w = parseFloat(mathSvg.getAttribute("width") || "0") * EX_TO_PX;
+                    let h = parseFloat(mathSvg.getAttribute("height") || "0") * EX_TO_PX;
+                    let inner = mathSvg.innerHTML.replace(/currentColor/gi, "black");
+                    svg += `<svg x="${cx}" y="${cy - h/2}" width="${w}" height="${h}" viewBox="${mathSvg.getAttribute("viewBox")}">${inner}</svg>`;
+                    return; 
+                }
+            }
+        } catch (e) {}
+        svg += `<text x="${cx}" y="${cy}" font-size="22px" font-family="Times New Roman, serif" fill="black">${txt.content}</text>`;
     });
 
     svg += `</svg>`;

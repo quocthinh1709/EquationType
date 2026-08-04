@@ -62,12 +62,29 @@ export default function App() {
   const [tempPointX, setTempPointX] = useState("");
   const [graphColor, setGraphColor] = useState("#d13438"); // Lưu màu, mặc định là đỏ sậm
 
+
+  const [graphTexts, setGraphTexts] = useState<{ content: string, x: number, y: number }[]>([]);
+  const [tempTextContent, setTempTextContent] = useState("");
+  const [tempTextX, setTempTextX] = useState("");
+  const [tempTextY, setTempTextY] = useState("");
+
+  const [graphAsymptotes, setGraphAsymptotes] = useState<{ type: 'vertical' | 'horizontal', value: number }[]>([]);
+  const [tempAsymType, setTempAsymType] = useState<'vertical' | 'horizontal'>('vertical');
+  const [tempAsymValue, setTempAsymValue] = useState("");
+
+  useEffect(() => {
+    setGraphAsymptotes([]);
+    setGraphTexts([]);
+  }, [currentLatex]);
+
+
   // --- STATE DÀNH CHO TÍNH GIÁ TRỊ TẠI ĐIỂM (EVALUATE AT) ---
   const [isEvalAtOpen, setIsEvalAtOpen] = useState(false);
   const [evalAtVars, setEvalAtVars] = useState<string[]>([]);
   const [evalAtValues, setEvalAtValues] = useState<Record<string, string>>({});
 
   // Effect tự động vẽ lại Đồ thị mỗi khi cấu hình hoặc biểu thức thay đổi
+  /*
   useEffect(() => {
     if (!currentLatex || !graphPreview) return;
     try {
@@ -78,8 +95,46 @@ export default function App() {
       // Bỏ qua lỗi vẽ đồ thị
     }
   }, [currentLatex, graphConfig, graphAnnotations, graphColor]); // Tự động chạy lại khi xMin, xMax đổi
+  */
+ useEffect(() => {
+    if (!currentLatex || !graphPreview) return;
+    try {
+      const evaluator = createGraphEvaluator(currentLatex, ce);
+      // Thêm graphTexts, graphAsymptotes vào đây:
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes); 
+      setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+    } catch (e) {
+      // Bỏ qua lỗi vẽ đồ thị
+    }
+  }, [currentLatex, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes]);
+
+  // --- Rút trích asymptotes từ BBT ---
+  const extractAsymptotesFromBBT = (colsData: any[]) => {
+    const asymptotes: { type: 'vertical' | 'horizontal', value: number }[] = [];
+    if (!colsData) return asymptotes;
+    const parseNum = (val: any) => {
+        if (typeof val === 'number') return val;
+        let num = parseFloat(val);
+        if (!isNaN(num)) return num;
+        try { return parseFloat(ce.parse(val).N().toString()); } catch { return NaN; }
+    };
+    colsData.forEach((c: any) => {
+        if (c.type === 'val') {
+            if (c.isDis) {
+                const xVal = parseNum(c.x);
+                if (!isNaN(xVal) && !asymptotes.some(a => a.type === 'vertical' && a.value === xVal)) asymptotes.push({ type: 'vertical', value: xVal });
+            }
+            if (typeof c.x === 'string' && c.x.includes('\\infty')) {
+                const yVal = parseNum(c.y);
+                if (!isNaN(yVal) && !asymptotes.some(a => a.type === 'horizontal' && a.value === yVal)) asymptotes.push({ type: 'horizontal', value: yVal });
+            }
+        }
+    });
+    return asymptotes;
+  };
 
   // Nút "Vẽ đồ thị"
+  /*
   const handlePreviewGraph = () => {
     if (!currentLatex) return;
     try {
@@ -91,6 +146,31 @@ export default function App() {
       setGraphPreview(null);
     }
   };
+  */
+ const handlePreviewGraph = () => {
+    if (!currentLatex) return;
+    try {
+      const evaluator = createGraphEvaluator(currentLatex, ce);
+      
+      // Đoạn thêm mới: Tự tìm tiệm cận
+      let newAsyms = [...graphAsymptotes];
+      try {
+          const cols = bbtData ? bbtData.cols : calculateVariationTableData(currentLatex, ce);
+          const autoAsyms = extractAsymptotesFromBBT(cols);
+          autoAsyms.forEach(auto => {
+              if (!newAsyms.some(manual => manual.type === auto.type && manual.value === auto.value)) newAsyms.push(auto);
+          });
+          setGraphAsymptotes(newAsyms); 
+      } catch (err) {}
+
+      // Truyền thêm newAsyms và graphTexts vào buildGraphSvg
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, newAsyms);
+      setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+      scrollToRef(graphPreviewRef); 
+    } catch (e) {
+      setGraphPreview(null);
+    }
+  }
 
   // Nút chèn đồ thị vào Word
   const handleInsertGraph = async () => {
@@ -146,6 +226,33 @@ export default function App() {
     } catch (e) {
       console.error("Lỗi lấy tọa độ điểm:", e);
     }
+  };
+
+
+
+  const handleAddText = () => {
+    if (!tempTextContent.trim() || !tempTextX.trim() || !tempTextY.trim()) return;
+    try {
+        const xVal = parseFloat(ce.parse(tempTextX).N().toString());
+        const yVal = parseFloat(ce.parse(tempTextY).N().toString());
+        if (!isNaN(xVal) && !isNaN(yVal)) {
+            setGraphTexts([...graphTexts, { content: tempTextContent, x: xVal, y: yVal }]);
+            setTempTextContent(""); setTempTextX(""); setTempTextY("");
+            setTimeout(handlePreviewGraph, 50);
+        }
+    } catch (e) {}
+  };
+
+  const handleAddAsymptote = () => {
+    if (!tempAsymValue.trim()) return;
+    try {
+        const val = parseFloat(ce.parse(tempAsymValue).N().toString());
+        if (!isNaN(val)) {
+            setGraphAsymptotes([...graphAsymptotes, { type: tempAsymType, value: val }]);
+            setTempAsymValue("");
+            setTimeout(handlePreviewGraph, 50);
+        }
+    } catch (e) {}
   };
 
 
@@ -959,7 +1066,65 @@ export default function App() {
                 )}
               </div>
 
-              <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "LineChart" }} onClick={handleInsertGraph} style={{ height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
+              <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
+                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.asymptoteLabel}</Label>
+                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                        <ChoiceGroup 
+                            options={[ { key: 'vertical', text: t.asymVertical }, { key: 'horizontal', text: t.asymHorizontal } ]} 
+                            selectedKey={tempAsymType} 
+                            onChange={(_, option) => setTempAsymType(option?.key as 'vertical' | 'horizontal')}
+                            styles={{ flexContainer: { display: 'flex', flexDirection: 'row', gap: '10px' } }}
+                        />
+                        <TextField placeholder={t.asymValuePlaceholder} value={tempAsymValue} onChange={(_, v) => setTempAsymValue(v || "")} styles={{ root: { minWidth: 150 } }} />
+                        <DefaultButton text={t.addAsymBtn} onClick={handleAddAsymptote} />
+                    </Stack>
+
+                    {graphAsymptotes.length > 0 && (
+                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                        {graphAsymptotes.map((asym, idx) => (
+                            <div key={`asym-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontWeight: 'bold', color: '#0078d4' }}>
+                                    {asym.type === 'vertical' ? `${t.asymVerticalPrefix}${asym.value}` : `${t.asymHorizontalPrefix}${asym.value}`}
+                                </span>
+                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                                    const newAsyms = graphAsymptotes.filter((_, i) => i !== idx);
+                                    setGraphAsymptotes(newAsyms);
+                                    setTimeout(() => handlePreviewGraph(), 50);
+                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                            </div>
+                        ))}
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
+                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.customTextLabel}</Label>
+                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                        <TextField placeholder={t.textExprPlaceholder} value={tempTextContent} onChange={(_, v) => setTempTextContent(v || "")} styles={{ root: { flexGrow: 1, minWidth: 120 } }} />
+                        <TextField placeholder={t.textCoordX} value={tempTextX} onChange={(_, v) => setTempTextX(v || "")} styles={{ root: { width: 80 } }} />
+                        <TextField placeholder={t.textCoordY} value={tempTextY} onChange={(_, v) => setTempTextY(v || "")} styles={{ root: { width: 80 } }} />
+                        <DefaultButton text={t.addTextBtn} onClick={handleAddText} />
+                    </Stack>
+
+                    {graphTexts.length > 0 && (
+                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                        {graphTexts.map((txt, idx) => (
+                            <div key={`txt-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                                    {txt.content}
+                                </math-field>
+                                <span>({txt.x}; {txt.y})</span>
+                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                                    setGraphTexts(graphTexts.filter((_, i) => i !== idx));
+                                    setTimeout(() => handlePreviewGraph(), 50);
+                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                            </div>
+                        ))}
+                        </div>
+                    )}
+                </div>              
+              
+              <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "LineChart" }} onClick={handleInsertGraph} style={{ marginTop: "20px", height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
             </div>
           )}
 

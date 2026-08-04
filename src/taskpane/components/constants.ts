@@ -77,7 +77,19 @@ export const uiText = {
     pointBtn: "Thêm điểm",
     pointInputName: "Tên điểm (A, B,...)",
     pointInputX: "Nhập giá trị x...",
-    evaluateAtTitle: "Tính giá trị hàm số tại điểm (x, y...)"
+    evaluateAtTitle: "Tính giá trị hàm số tại điểm (x, y...)",
+    asymptoteLabel: "Tiệm cận (Asymptotes):",
+    asymVertical: "Đứng (x)",
+    asymHorizontal: "Ngang (y)",
+    asymValuePlaceholder: "Giá trị (VD: 1 hoặc -1/2)",
+    addAsymBtn: "Thêm tiệm cận",
+    asymVerticalPrefix: "Đứng: x=",
+    asymHorizontalPrefix: "Ngang: y=",
+    customTextLabel: "Thêm Text tự do vào đồ thị:",
+    textExprPlaceholder: "Biểu thức (VD: y=x^2+1)",
+    textCoordX: "Tọa độ x",
+    textCoordY: "Tọa độ y",
+    addTextBtn: "Thêm Text"
   },
   en: {
     webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
@@ -139,6 +151,18 @@ export const uiText = {
     pointBtn: "Add point",
     pointInputName: "Enter name (A, B,...)",
     pointInputX: "Enter x value",
-    evaluateAtTitle: "Evaluate the function at the point (x, y…)"
+    evaluateAtTitle: "Evaluate the function at the point (x, y…)",
+    asymptoteLabel: "Asymptotes:",
+    asymVertical: "Vertical (x)",
+    asymHorizontal: "Horizontal (y)",
+    asymValuePlaceholder: "Value (e.g., 1 or -1/2)",
+    addAsymBtn: "Add Asymptote",
+    asymVerticalPrefix: "Vertical: x=",
+    asymHorizontalPrefix: "Horizontal: y=",
+    customTextLabel: "Add Custom Text to graph:",
+    textExprPlaceholder: "Expression (e.g., y=x^2+1)",
+    textCoordX: "X Coord",
+    textCoordY: "Y Coord",
+    addTextBtn: "Add Text"
   }
 };
