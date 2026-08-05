@@ -381,10 +381,10 @@ export const buildGraphSvg = (
         const asymColor = asym.color || "#0078d4";
         if (asym.type === 'vertical') {
             const cx = mapX(asym.value);
-            svg += `<line x1="${cx}" y1="${P}" x2="${cx}" y2="${H-P}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="1.5" clip-path="url(#graphClip)" />`;
+            svg += `<line x1="${cx}" y1="${P}" x2="${cx}" y2="${H-P}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="2.0" clip-path="url(#graphClip)" />`;
         } else if (asym.type === 'horizontal') {
             const cy = mapY(asym.value);
-            svg += `<line x1="${P}" y1="${cy}" x2="${W-P}" y2="${cy}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="1.5" clip-path="url(#graphClip)" />`;
+            svg += `<line x1="${P}" y1="${cy}" x2="${W-P}" y2="${cy}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="2.0" clip-path="url(#graphClip)" />`;
         }
     });
 
