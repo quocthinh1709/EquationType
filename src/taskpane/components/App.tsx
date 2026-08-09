@@ -68,8 +68,10 @@ export default function App() {
   const [tempTextX, setTempTextX] = useState("");
   const [tempTextY, setTempTextY] = useState("");
 
-  const [graphAsymptotes, setGraphAsymptotes] = useState<{ type: 'vertical' | 'horizontal', value: number }[]>([]);
-  const [tempAsymType, setTempAsymType] = useState<'vertical' | 'horizontal'>('vertical');
+  //const [graphAsymptotes, setGraphAsymptotes] = useState<{ type: 'vertical' | 'horizontal', value: number }[]>([]);
+  //const [tempAsymType, setTempAsymType] = useState<'vertical' | 'horizontal'>('vertical');
+  const [graphAsymptotes, setGraphAsymptotes] = useState<{ type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number }[]>([]);
+  const [tempAsymType, setTempAsymType] = useState<'vertical' | 'horizontal' | 'oblique'>('vertical');
   const [tempAsymValue, setTempAsymValue] = useState("");
 
   useEffect(() => {
@@ -110,7 +112,7 @@ export default function App() {
 
   // --- Rút trích asymptotes từ BBT ---
   const extractAsymptotesFromBBT = (colsData: any[]) => {
-    const asymptotes: { type: 'vertical' | 'horizontal', value: number }[] = [];
+    const asymptotes: { type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number }[] = [];
     if (!colsData) return asymptotes;
     const parseNum = (val: any) => {
         if (typeof val === 'number') return val;
@@ -133,6 +135,34 @@ export default function App() {
     return asymptotes;
   };
 
+  // HÀM HELPER: Xấp xỉ giới hạn để tìm tiệm cận xiên (y = mx + n)
+  const detectObliqueAsymptote = (evaluator: (x: number) => number) => {
+    try {
+        const xL = 100000; // Cho x tiến tới vô cực
+        const y1 = evaluator(xL);
+        const y2 = evaluator(-xL);
+        if (isNaN(y1) || isNaN(y2)) return null;
+
+        // Tính đạo hàm m (độ dốc) và hệ số n tại cực +
+        const m1 = evaluator(xL + 1) - y1;
+        const n1 = y1 - m1 * xL;
+
+        // Tính đạo hàm m (độ dốc) và hệ số n tại cực -
+        const m2 = y2 - evaluator(-xL - 1);
+        const n2 = y2 - m2 * (-xL);
+
+        // Ràng buộc: Hai đầu mút phải cùng tiến về 1 đường thẳng (đặc trưng hàm phân thức)
+        // m phải khác 0 (nếu bằng 0 thì nó là tiệm cận ngang rồi)
+        if (Math.abs(m1 - m2) < 0.01 && Math.abs(n1 - n2) < 0.5 && Math.abs(m1) > 0.001) {
+            return { 
+                m: Math.round(m1 * 100) / 100, 
+                n: Math.round(n1 * 100) / 100 
+            };
+        }
+    } catch (e) {}
+    return null;
+  };
+
   // Nút "Vẽ đồ thị"
   /*
   const handlePreviewGraph = () => {
@@ -146,7 +176,7 @@ export default function App() {
       setGraphPreview(null);
     }
   };
-  */
+  
  const handlePreviewGraph = () => {
     if (!currentLatex) return;
     try {
@@ -171,6 +201,57 @@ export default function App() {
       setGraphPreview(null);
     }
   }
+  */
+
+  const handlePreviewGraph = () => {
+    if (!currentLatex) return;
+    try {
+      const evaluator = createGraphEvaluator(currentLatex, ce);
+      
+      let newAsyms = [...graphAsymptotes];
+      try {
+          // 1. Lấy tiệm cận đứng/ngang từ BBT
+          const cols = bbtData ? bbtData.cols : calculateVariationTableData(currentLatex, ce);
+          const autoAsyms = extractAsymptotesFromBBT(cols);
+          
+          // 2. Dò tìm thêm tiệm cận xiên
+          const oblique = detectObliqueAsymptote(evaluator);
+          if (oblique) autoAsyms.push({ type: 'oblique', m: oblique.m, n: oblique.n });
+
+          // 3. Gộp vào danh sách
+          autoAsyms.forEach(auto => {
+              const exists = newAsyms.some(manual => manual.type === auto.type && manual.value === auto.value && manual.m === auto.m);
+              if (!exists) newAsyms.push(auto);
+          });
+          setGraphAsymptotes(newAsyms); 
+      } catch (err) {}
+
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, newAsyms);
+      setGraphPreview({ ...svgData, bieuThuc: currentLatex });
+      scrollToRef(graphPreviewRef); 
+    } catch (e) { setGraphPreview(null); }
+  };
+
+  const handleAddAsymptote = () => {
+    if (!tempAsymValue.trim()) return;
+    try {
+        if (tempAsymType === 'oblique') {
+            // Nếu người dùng nhập tay phương trình (VD: 2x-1), thế x=0 và x=1 để tìm m, n
+            const expr = ce.parse(tempAsymValue);
+            const y0 = parseFloat(expr.subs({x: 0}).evaluate().N().toString());
+            const y1 = parseFloat(expr.subs({x: 1}).evaluate().N().toString());
+            if (!isNaN(y0) && !isNaN(y1)) {
+                setGraphAsymptotes([...graphAsymptotes, { type: 'oblique', m: y1 - y0, n: y0 }]);
+            }
+        } else {
+            const val = parseFloat(ce.parse(tempAsymValue).N().toString());
+            if (!isNaN(val)) setGraphAsymptotes([...graphAsymptotes, { type: tempAsymType, value: val }]);
+        }
+        setTempAsymValue("");
+        //setTimeout(handlePreviewGraph, 50);
+    } catch (e) {}
+  };
+
 
   // Nút chèn đồ thị vào Word
   const handleInsertGraph = async () => {
@@ -238,11 +319,11 @@ export default function App() {
         if (!isNaN(xVal) && !isNaN(yVal)) {
             setGraphTexts([...graphTexts, { content: tempTextContent, x: xVal, y: yVal }]);
             setTempTextContent(""); setTempTextX(""); setTempTextY("");
-            setTimeout(handlePreviewGraph, 50);
+            //setTimeout(handlePreviewGraph, 50);
         }
     } catch (e) {}
   };
-
+  /*
   const handleAddAsymptote = () => {
     if (!tempAsymValue.trim()) return;
     try {
@@ -254,7 +335,7 @@ export default function App() {
         }
     } catch (e) {}
   };
-
+  */
 
   const [bbtData, setBbtData] = useState<any>(null);
 
@@ -1070,12 +1151,24 @@ export default function App() {
                     <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.asymptoteLabel}</Label>
                     <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
                         <ChoiceGroup 
-                            options={[ { key: 'vertical', text: t.asymVertical }, { key: 'horizontal', text: t.asymHorizontal } ]} 
+                            // 1. THÊM LỰA CHỌN OBLIQUE (XIÊN)
+                            options={[ 
+                                { key: 'vertical', text: t.asymVertical }, 
+                                { key: 'horizontal', text: t.asymHorizontal },
+                                { key: 'oblique', text: t.asymOblique } 
+                            ]} 
                             selectedKey={tempAsymType} 
-                            onChange={(_, option) => setTempAsymType(option?.key as 'vertical' | 'horizontal')}
+                            // 2. CẬP NHẬT TYPE CHO onChange
+                            onChange={(_, option) => setTempAsymType(option?.key as 'vertical' | 'horizontal' | 'oblique')}
                             styles={{ flexContainer: { display: 'flex', flexDirection: 'row', gap: '10px' } }}
                         />
-                        <TextField placeholder={t.asymValuePlaceholder} value={tempAsymValue} onChange={(_, v) => setTempAsymValue(v || "")} styles={{ root: { minWidth: 150 } }} />
+                        {/* 3. TỰ ĐỘNG ĐỔI PLACEHOLDER NẾU CHỌN XIÊN */}
+                        <TextField 
+                            placeholder={tempAsymType === 'oblique' ? t.asymObliquePlaceholder : t.asymValuePlaceholder} 
+                            value={tempAsymValue} 
+                            onChange={(_, v) => setTempAsymValue(v || "")} 
+                            styles={{ root: { minWidth: 150 } }} 
+                        />
                         <DefaultButton text={t.addAsymBtn} onClick={handleAddAsymptote} />
                     </Stack>
 
@@ -1084,12 +1177,15 @@ export default function App() {
                         {graphAsymptotes.map((asym, idx) => (
                             <div key={`asym-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                                 <span style={{ fontWeight: 'bold', color: '#0078d4' }}>
-                                    {asym.type === 'vertical' ? `${t.asymVerticalPrefix}${asym.value}` : `${t.asymHorizontalPrefix}${asym.value}`}
+                                    {/* 4. RENDER LABEL CHO CẢ 3 LOẠI */}
+                                    {asym.type === 'vertical' ? `${t.asymVerticalPrefix}${asym.value}` : 
+                                     asym.type === 'horizontal' ? `${t.asymHorizontalPrefix}${asym.value}` : 
+                                     `${t.asymObliquePrefix}${asym.m}x${(asym.n || 0) >= 0 ? '+' : ''}${asym.n}`}
                                 </span>
                                 <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
                                     const newAsyms = graphAsymptotes.filter((_, i) => i !== idx);
                                     setGraphAsymptotes(newAsyms);
-                                    setTimeout(() => handlePreviewGraph(), 50);
+                                    //setTimeout(() => handlePreviewGraph(), 50);
                                 }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
                             </div>
                         ))}
@@ -1116,7 +1212,7 @@ export default function App() {
                                 <span>({txt.x}; {txt.y})</span>
                                 <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
                                     setGraphTexts(graphTexts.filter((_, i) => i !== idx));
-                                    setTimeout(() => handlePreviewGraph(), 50);
+                                    //setTimeout(() => handlePreviewGraph(), 50);
                                 }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
                             </div>
                         ))}

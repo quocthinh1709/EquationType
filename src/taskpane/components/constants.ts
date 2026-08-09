@@ -89,7 +89,11 @@ export const uiText = {
     textExprPlaceholder: "Biểu thức (VD: y=x^2+1)",
     textCoordX: "Tọa độ x",
     textCoordY: "Tọa độ y",
-    addTextBtn: "Thêm Text"
+    addTextBtn: "Thêm Text",
+    // ... các từ khóa cũ của vi ...
+    asymOblique: "Xiên (y=ax+b)",
+    asymObliquePrefix: "Xiên: y=",
+    asymObliquePlaceholder: "Nhập hàm (VD: x+1)",
   },
   en: {
     webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
@@ -163,6 +167,9 @@ export const uiText = {
     textExprPlaceholder: "Expression (e.g., y=x^2+1)",
     textCoordX: "X Coord",
     textCoordY: "Y Coord",
-    addTextBtn: "Add Text"
+    addTextBtn: "Add Text",
+    asymOblique: "Oblique (y=ax+b)",
+    asymObliquePrefix: "Oblique: y=",
+    asymObliquePlaceholder: "Expr (e.g., x+1)",
   }
 };

@@ -331,7 +331,7 @@ export const buildGraphSvg = (
 
     // --- Text ---
     texts: { content: string, x: number, y: number }[] = [], 
-    asymptotes: { type: 'vertical' | 'horizontal', value: number, color?: string }[] = []
+    asymptotes: { type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number, color?: string }[] = []
 ) => {
     const { xMin, xMax, yMin, yMax } = config;
     const W = 600; 
@@ -385,7 +385,13 @@ export const buildGraphSvg = (
         } else if (asym.type === 'horizontal') {
             const cy = mapY(asym.value);
             svg += `<line x1="${P}" y1="${cy}" x2="${W-P}" y2="${cy}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="2.0" clip-path="url(#graphClip)" />`;
+        } else if (asym.type === 'oblique' && asym.m !== undefined && asym.n !== undefined) {
+            // Toán học: y = mx + n. Tính toạ độ 2 đầu mút theo xMin và xMax
+            const y1 = asym.m * xMin + asym.n;
+            const y2 = asym.m * xMax + asym.n;
+            svg += `<line x1="${mapX(xMin)}" y1="${mapY(y1)}" x2="${mapX(xMax)}" y2="${mapY(y2)}" stroke="${asymColor}" stroke-dasharray="6 4" stroke-width="1.5" clip-path="url(#graphClip)" />`;
         }
+
     });
 
     const originY = Math.max(P, Math.min(H - P, mapY(0)));
