@@ -331,7 +331,8 @@ export const buildGraphSvg = (
 
     // --- Text ---
     texts: { content: string, x: number, y: number }[] = [], 
-    asymptotes: { type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number, color?: string }[] = []
+    asymptotes: { type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number, color?: string }[] = [],
+    extraGraphs: { evaluator: (x: number) => number, color: string }[] = []
 ) => {
     const { xMin, xMax, yMin, yMax } = config;
     const W = 600; 
@@ -403,7 +404,7 @@ export const buildGraphSvg = (
     svg += `<text x="${originX + 10}" y="${P/2 - 10}" font-size="22px" font-style="italic">y</text>`;
     
     svg += `<text x="${originX - 22}" y="${originY + 22}" font-size="22px" font-style="italic">O</text>`;
-
+    /*
     const steps = 400;
     const dx = (xMax - xMin) / steps;
     let pathD = "";
@@ -431,6 +432,42 @@ export const buildGraphSvg = (
     
     // ĐÃ ĐỔI: Dùng biến lineColor thay vì màu đỏ cố định
     svg += `<path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#graphClip)" />`;
+    */
+    const steps = 400;
+    const dx = (xMax - xMin) / steps;
+    
+    // --- BƯỚC MỚI: Gộp hàm chính và các hàm phụ vào 1 mảng ---
+    const allGraphs = [{ evaluator, color: lineColor }, ...extraGraphs];
+
+    // Lặp qua từng đồ thị để vẽ
+    allGraphs.forEach(g => {
+        let pathD = "";
+        let prevY = NaN;
+        
+        for (let i = 0; i <= steps; i++) {
+            const x = xMin + i * dx;
+            const y = g.evaluator(x);
+
+            if (!isNaN(y) && isFinite(y)) {
+                const cx = mapX(x);
+                const cy = mapY(y);
+
+                const jump = Math.abs(y - prevY);
+                if (i === 0 || isNaN(prevY) || jump > (yMax - yMin) / 2) {
+                    pathD += ` M ${cx} ${cy}`; 
+                } else {
+                    pathD += ` L ${cx} ${cy}`; 
+                }
+                prevY = y;
+            } else {
+                prevY = NaN;
+            }
+        }
+        
+        // Vẽ đường SVG cho từng hàm số với màu sắc tương ứng
+        svg += `<path d="${pathD}" fill="none" stroke="${g.color}" stroke-width="2.5" stroke-linejoin="round" clip-path="url(#graphClip)" />`;
+    });
+
 
     // ===============================================================
     // THUẬT TOÁN ĐỊNH VỊ NHÃN TỰ ĐỘNG (SMART LABEL PLACEMENT)

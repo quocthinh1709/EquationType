@@ -90,10 +90,12 @@ export const uiText = {
     textCoordX: "Tọa độ x",
     textCoordY: "Tọa độ y",
     addTextBtn: "Thêm Text",
-    // ... các từ khóa cũ của vi ...
     asymOblique: "Xiên (y=ax+b)",
     asymObliquePrefix: "Xiên: y=",
     asymObliquePlaceholder: "Nhập hàm (VD: x+1)",
+    extraGraphsLabel: "Vẽ thêm đồ thị (Extra Graphs):",
+    extraGraphExprPlaceholder: "Biểu thức (VD: y=x+1)",
+    addExtraGraphBtn: "Thêm đồ thị"
   },
   en: {
     webWarning: "Web version does not support inserting into Word!\nTo insert equations, please click \"Open in Desktop App\" on the Word toolbar.",
@@ -171,5 +173,8 @@ export const uiText = {
     asymOblique: "Oblique (y=ax+b)",
     asymObliquePrefix: "Oblique: y=",
     asymObliquePlaceholder: "Expr (e.g., x+1)",
+    extraGraphsLabel: "Add Extra Graphs:",
+    extraGraphExprPlaceholder: "Expression (e.g., y=x+1)",
+    addExtraGraphBtn: "Add Graph"
   }
 };

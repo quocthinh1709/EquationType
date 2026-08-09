@@ -62,6 +62,11 @@ export default function App() {
   const [tempPointX, setTempPointX] = useState("");
   const [graphColor, setGraphColor] = useState("#d13438"); // Lưu màu, mặc định là đỏ sậm
 
+  // --- STATE DÀNH CHO VẼ NHIỀU ĐỒ THỊ ---
+  const [extraGraphs, setExtraGraphs] = useState<{ latex: string, color: string }[]>([]);
+  const [tempExtraLatex, setTempExtraLatex] = useState("");
+  const [tempExtraColor, setTempExtraColor] = useState("#0078d4"); // Mặc định xanh dương
+
 
   const [graphTexts, setGraphTexts] = useState<{ content: string, x: number, y: number }[]>([]);
   const [tempTextContent, setTempTextContent] = useState("");
@@ -102,13 +107,19 @@ export default function App() {
     if (!currentLatex || !graphPreview) return;
     try {
       const evaluator = createGraphEvaluator(currentLatex, ce);
+
+      // --- Dịch các hàm phụ ---
+      const compiledExtraGraphs = extraGraphs.map(eg => ({
+          evaluator: createGraphEvaluator(eg.latex, ce),
+          color: eg.color
+      }));
       // Thêm graphTexts, graphAsymptotes vào đây:
-      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes); 
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes, compiledExtraGraphs); 
       setGraphPreview({ ...svgData, bieuThuc: currentLatex });
     } catch (e) {
       // Bỏ qua lỗi vẽ đồ thị
     }
-  }, [currentLatex, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes]);
+  }, [currentLatex, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes, extraGraphs]);
 
   // --- Rút trích asymptotes từ BBT ---
   const extractAsymptotesFromBBT = (colsData: any[]) => {
@@ -207,6 +218,11 @@ export default function App() {
     if (!currentLatex) return;
     try {
       const evaluator = createGraphEvaluator(currentLatex, ce);
+
+      const compiledExtraGraphs = extraGraphs.map(eg => ({
+          evaluator: createGraphEvaluator(eg.latex, ce),
+          color: eg.color
+      }));
       
       let newAsyms = [...graphAsymptotes];
       try {
@@ -226,7 +242,7 @@ export default function App() {
           setGraphAsymptotes(newAsyms); 
       } catch (err) {}
 
-      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, newAsyms);
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, newAsyms, compiledExtraGraphs);
       setGraphPreview({ ...svgData, bieuThuc: currentLatex });
       scrollToRef(graphPreviewRef); 
     } catch (e) { setGraphPreview(null); }
@@ -1218,7 +1234,45 @@ export default function App() {
                         ))}
                         </div>
                     )}
-                </div>              
+                </div>   
+
+
+                {/* --- KHU VỰC VẼ NHIỀU ĐỒ THỊ --- */}
+                <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
+                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.extraGraphsLabel}</Label>
+                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                        <TextField placeholder={t.extraGraphExprPlaceholder} value={tempExtraLatex} onChange={(_, v) => setTempExtraLatex(v || "")} styles={{ root: { flexGrow: 1, minWidth: 150 } }} />
+                        <input
+                            type="color"
+                            value={tempExtraColor}
+                            onChange={(e) => setTempExtraColor(e.target.value)}
+                            style={{ width: "32px", height: "32px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }}
+                            title="Color"
+                        />
+                        <DefaultButton text={t.addExtraGraphBtn} onClick={() => {
+                            if (tempExtraLatex.trim()) {
+                                setExtraGraphs([...extraGraphs, { latex: tempExtraLatex, color: tempExtraColor }]);
+                                setTempExtraLatex("");
+                            }
+                        }} />
+                    </Stack>
+
+                    {extraGraphs.length > 0 && (
+                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                        {extraGraphs.map((eg, idx) => (
+                            <div key={`eg-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px", borderLeft: `4px solid ${eg.color}` }}>
+                                <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                                    {eg.latex}
+                                </math-field>
+                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                                    setExtraGraphs(extraGraphs.filter((_, i) => i !== idx));
+                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                            </div>
+                        ))}
+                        </div>
+                    )}
+                </div>
+                {/* --- KẾT THÚC --- */}          
               
               <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "LineChart" }} onClick={handleInsertGraph} style={{ marginTop: "20px", height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
             </div>
