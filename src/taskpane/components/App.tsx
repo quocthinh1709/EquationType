@@ -900,6 +900,10 @@ export default function App() {
       mf.style.border = "1px solid #8a8886"; mf.style.borderRadius = "4px"; mf.style.padding = "10px";
       mf.style.minHeight = "120px"; mf.style.backgroundColor = "#ffffff"; mf.style.boxSizing = "border-box";
       containerRef.current.appendChild(mf); mathfieldRef.current = mf;
+
+      defaultInlineRef.current = { ...mf.inlineShortcuts };
+      defaultMacrosRef.current = { ...mf.macros };
+
       mf.addEventListener("input", () => {
         setCurrentLatex(mf.getValue("latex-expanded"));
         setVerticalMathPreview(null); setVariationTablePreview(null); setBbtData(null);

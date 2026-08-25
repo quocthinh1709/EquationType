@@ -3,14 +3,13 @@
 // 1. Danh sách phím tắt gõ nhanh (Inline Shortcuts)
 export const customInlineShortcuts = {
     // Phân số, căn, vector
-    "ps": "\\frac{#0}{#?}",
-    "vt": "\\vec{#0}",
+    "phanso": "\\frac{#0}{#?}",
+    "vecto": "\\vec{#0}",
     "can": "\\sqrt{#0}",
-    "|": "\\mid",
     
     // Logic, toán tử
-    "td": "\\Leftrightarrow ",
-    "sr": "\\Rightarrow ",
+    "tuongduong": "\\Leftrightarrow ",
+    "suyra": "\\Rightarrow ",
     "thuoc": "\\in ",
     "<=>": "\\Leftrightarrow ",
     "->": "\\rightarrow ",
@@ -20,12 +19,12 @@ export const customInlineShortcuts = {
     "hept3an": "\\begin{cases} #0 &= #? \\\\ #? &= #? \\\\ #? &= #? \\end{cases}",
     
     // Tích phân, đạo hàm
-    "tp": "\\int_{#?}^{#?}",
-    "dh": "\\frac{d}{dx} #0",
+    "tichphan": "\\int_{#?}^{#?}",
+    "daoham": "\\frac{d}{dx} #0",
 
-    "tp3": "\\iiint",        
+    "tichphan3": "\\iiint",        
     "song": "\\rightsquigarrow", 
-    "gvuong": "\\square",
+    "gocvuong": "\\square",
     "angstrom": "\\text{Å}",
     "male": "\\text{♂}",
     "female": "\\text{♀}",
@@ -48,7 +47,7 @@ export const customInlineShortcuts = {
     "cos2x": "\\cos 2x = \\cos^2 x - \\sin^2 x",
     "nhithuc": "(a+b)^n = \\sum_{k=0}^{n} C_n^k a^{n-k} b^k",
     "vchop": "V = \\frac{1}{3} B \\cdot h",              // Thể tích khối chóp
-    "vltru": "V = B \\cdot h",                           // Thể tích khối lăng trụ
+    "vlangtru": "V = B \\cdot h",                           // Thể tích khối lăng trụ
     "vcau": "V = \\frac{4}{3}\\pi R^3",                  // Thể tích khối cầu
     "scau": "S = 4\\pi R^2",                             // Diện tích mặt cầu
     "vtron": "V = \\pi R^2 h",                           // Thể tích khối trụ tròn xoay
@@ -61,9 +60,9 @@ export const customInlineShortcuts = {
     "sncsc": "S_n = \\frac{n(u_1 + u_n)}{2}",            // Tổng n số hạng cấp số cộng
     "csn": "u_n = u_1 \\cdot q^{n-1}",                   // Cấp số nhân
     // Logic & Tập hợp
-    "vmo": "\\forall #? \\in #?",                     // Với mọi
-    "ttai": "\\exists #? \\in #?",                    // Tồn tại
-    "rong": "\\varnothing",                           // Tập rỗng
+    "voimoi": "\\forall #? \\in #?",                     // Với mọi
+    "tontai": "\\exists #? \\in #?",                    // Tồn tại
+    "taprong": "\\varnothing",                           // Tập rỗng
     "giao": "\\cap",                                  // Giao của 2 tập hợp
     "hop": "\\cup",                                   // Hợp của 2 tập hợp
     "hieu": "\\setminus",                             // Hiệu của 2 tập hợp
@@ -97,14 +96,14 @@ export const customInlineShortcuts = {
     "cklx": "T = 2\\pi \\sqrt{\\frac{m}{k}}",                           // Chu kỳ con lắc lò xo
     "ckdd": "T = 2\\pi \\sqrt{\\frac{l}{g}}",                           // Chu kỳ con lắc đơn
     "dlom": "I = \\frac{\\mathcal{E}}{R_N + r}",                        // Định luật Ohm cho toàn mạch
-    "ptdao": "x = A \\cos(\\omega t + \\varphi)",                       // Phương trình dao động điều hòa
+    "ptdaodong": "x = A \\cos(\\omega t + \\varphi)",                       // Phương trình dao động điều hòa
     "htquang": "\\frac{1}{d} + \\frac{1}{d'} = \\frac{1}{f}",           // Công thức thấu kính
 
-    "bsong": "\\lambda = v \\cdot T = \\frac{v}{f}",     // Bước sóng
-    "vsang": "x = k \\frac{\\lambda D}{a}",              // Vị trí vân sáng (Giao thoa ánh sáng)
-    "vtoi": "x = \\left(k + \\frac{1}{2}\\right) \\frac{\\lambda D}{a}", // Vị trí vân tối
+    "buocsong": "\\lambda = v \\cdot T = \\frac{v}{f}",     // Bước sóng
+    "vansang": "x = k \\frac{\\lambda D}{a}",              // Vị trí vân sáng (Giao thoa ánh sáng)
+    "vantoi": "x = \\left(k + \\frac{1}{2}\\right) \\frac{\\lambda D}{a}", // Vị trí vân tối
     "itruong": "i = \\frac{\\lambda D}{a}",              // Khoảng vân i
-    "tthong": "\\Phi = B \\cdot S \\cdot \\cos \\alpha", // Từ thông
+    "tuthong": "\\Phi = B \\cdot S \\cdot \\cos \\alpha", // Từ thông
     "sddcu": "e_c = -\\frac{\\Delta \\Phi}{\\Delta t}", // Suất điện động cảm ứng
     "fcl": "F = q \\cdot E",                             // Lực điện trường
     "flen": "F = |q| v B \\sin \\alpha",                 // Lực Lorentz
@@ -179,14 +178,13 @@ export const customMacros = {
     // Phân số, căn, vector
     "phanso": "\\frac{#0}{#?}",
     "vecto": "\\vec{#0}",
-    "canbachai": "\sqrt{#0}",
+    "canbachai": "\\sqrt{#0}",
     "canbacba": "\\sqrt[3]{#0}",
    
     // Logic, toán tử
-    "td": "\\Leftrightarrow ",
+    "tuongduong": "\\Leftrightarrow ",
     "suyra": "\\Rightarrow ",
     "thuoc": "\\in ",
-    "tuongduong": "\\Leftrightarrow ",
     "->": "\\rightarrow ",
 
     // Hệ phương trình
@@ -195,7 +193,7 @@ export const customMacros = {
     "hehaiptnew": "\\left\\{ \\begin{aligned} #0 &= #? \\\\ #? &= #? \\end{aligned} \\right",
     
     // Tích phân, đạo hàm
-    "ticphan": "\\int_{#?}^{#?}",
+    "tichphan": "\\int_{#?}^{#?}",
     "daoham": "\\frac{d}{dx} #0",
     "male": "\\text{♂}",
     "female": "\\text{♀}",

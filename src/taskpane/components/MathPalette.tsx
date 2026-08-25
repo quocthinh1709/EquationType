@@ -1215,7 +1215,7 @@ export default function MathPalette({ onInsert, language }: MathPaletteProps) {
                         <MathBtn displayLatex="\textrm{txt}" insertLatex="\textrm{#0}" title="\textrm{}" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\cancel{2}" insertLatex="\cancel{#0}" title="\cancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\bcancel{2}" insertLatex="\bcancel{#0}" title="\bcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
-                        <MathBtn displayLatex="\xcancel{ABC}" insertLatex="\xcancel{ABC}" title="\xcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
+                        <MathBtn displayLatex="\xcancel{ABC}" insertLatex="\xcancel{#0}" title="\xcancel" onInsert={onInsert} borderColor={PaletteColors.default} />
                         <MathBtn displayLatex="\small\overbrace{a+b+c}^{\text{note}}" insertLatex="\overbrace{a+b+c}^{\text{#0}}" title="\overbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\small\underbrace{a+b+c}_{\text{note}}" insertLatex="\underbrace{a+b+c}_{\text{#0}}" title="\underbrace" onInsert={onInsert} borderColor={PaletteColors.latex} />
                         <MathBtn displayLatex="\boxed{AB}" insertLatex="\boxed{#0}" title="\boxed" onInsert={onInsert} borderColor={PaletteColors.default} />
