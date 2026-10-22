@@ -103,18 +103,18 @@ export default function App() {
     }
   }, [currentLatex, graphConfig, graphAnnotations, graphColor]); // Tự động chạy lại khi xMin, xMax đổi
   */
- useEffect(() => {
+  useEffect(() => {
     if (!currentLatex || !graphPreview) return;
     try {
       const evaluator = createGraphEvaluator(currentLatex, ce);
 
       // --- Dịch các hàm phụ ---
       const compiledExtraGraphs = extraGraphs.map(eg => ({
-          evaluator: createGraphEvaluator(eg.latex, ce),
-          color: eg.color
+        evaluator: createGraphEvaluator(eg.latex, ce),
+        color: eg.color
       }));
       // Thêm graphTexts, graphAsymptotes vào đây:
-      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes, compiledExtraGraphs); 
+      const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, graphAsymptotes, compiledExtraGraphs);
       setGraphPreview({ ...svgData, bieuThuc: currentLatex });
     } catch (e) {
       // Bỏ qua lỗi vẽ đồ thị
@@ -126,22 +126,22 @@ export default function App() {
     const asymptotes: { type: 'vertical' | 'horizontal' | 'oblique', value?: number, m?: number, n?: number }[] = [];
     if (!colsData) return asymptotes;
     const parseNum = (val: any) => {
-        if (typeof val === 'number') return val;
-        let num = parseFloat(val);
-        if (!isNaN(num)) return num;
-        try { return parseFloat(ce.parse(val).N().toString()); } catch { return NaN; }
+      if (typeof val === 'number') return val;
+      let num = parseFloat(val);
+      if (!isNaN(num)) return num;
+      try { return parseFloat(ce.parse(val).N().toString()); } catch { return NaN; }
     };
     colsData.forEach((c: any) => {
-        if (c.type === 'val') {
-            if (c.isDis) {
-                const xVal = parseNum(c.x);
-                if (!isNaN(xVal) && !asymptotes.some(a => a.type === 'vertical' && a.value === xVal)) asymptotes.push({ type: 'vertical', value: xVal });
-            }
-            if (typeof c.x === 'string' && c.x.includes('\\infty')) {
-                const yVal = parseNum(c.y);
-                if (!isNaN(yVal) && !asymptotes.some(a => a.type === 'horizontal' && a.value === yVal)) asymptotes.push({ type: 'horizontal', value: yVal });
-            }
+      if (c.type === 'val') {
+        if (c.isDis) {
+          const xVal = parseNum(c.x);
+          if (!isNaN(xVal) && !asymptotes.some(a => a.type === 'vertical' && a.value === xVal)) asymptotes.push({ type: 'vertical', value: xVal });
         }
+        if (typeof c.x === 'string' && c.x.includes('\\infty')) {
+          const yVal = parseNum(c.y);
+          if (!isNaN(yVal) && !asymptotes.some(a => a.type === 'horizontal' && a.value === yVal)) asymptotes.push({ type: 'horizontal', value: yVal });
+        }
+      }
     });
     return asymptotes;
   };
@@ -149,28 +149,28 @@ export default function App() {
   // HÀM HELPER: Xấp xỉ giới hạn để tìm tiệm cận xiên (y = mx + n)
   const detectObliqueAsymptote = (evaluator: (x: number) => number) => {
     try {
-        const xL = 100000; // Cho x tiến tới vô cực
-        const y1 = evaluator(xL);
-        const y2 = evaluator(-xL);
-        if (isNaN(y1) || isNaN(y2)) return null;
+      const xL = 100000; // Cho x tiến tới vô cực
+      const y1 = evaluator(xL);
+      const y2 = evaluator(-xL);
+      if (isNaN(y1) || isNaN(y2)) return null;
 
-        // Tính đạo hàm m (độ dốc) và hệ số n tại cực +
-        const m1 = evaluator(xL + 1) - y1;
-        const n1 = y1 - m1 * xL;
+      // Tính đạo hàm m (độ dốc) và hệ số n tại cực +
+      const m1 = evaluator(xL + 1) - y1;
+      const n1 = y1 - m1 * xL;
 
-        // Tính đạo hàm m (độ dốc) và hệ số n tại cực -
-        const m2 = y2 - evaluator(-xL - 1);
-        const n2 = y2 - m2 * (-xL);
+      // Tính đạo hàm m (độ dốc) và hệ số n tại cực -
+      const m2 = y2 - evaluator(-xL - 1);
+      const n2 = y2 - m2 * (-xL);
 
-        // Ràng buộc: Hai đầu mút phải cùng tiến về 1 đường thẳng (đặc trưng hàm phân thức)
-        // m phải khác 0 (nếu bằng 0 thì nó là tiệm cận ngang rồi)
-        if (Math.abs(m1 - m2) < 0.01 && Math.abs(n1 - n2) < 0.5 && Math.abs(m1) > 0.001) {
-            return { 
-                m: Math.round(m1 * 100) / 100, 
-                n: Math.round(n1 * 100) / 100 
-            };
-        }
-    } catch (e) {}
+      // Ràng buộc: Hai đầu mút phải cùng tiến về 1 đường thẳng (đặc trưng hàm phân thức)
+      // m phải khác 0 (nếu bằng 0 thì nó là tiệm cận ngang rồi)
+      if (Math.abs(m1 - m2) < 0.01 && Math.abs(n1 - n2) < 0.5 && Math.abs(m1) > 0.001) {
+        return {
+          m: Math.round(m1 * 100) / 100,
+          n: Math.round(n1 * 100) / 100
+        };
+      }
+    } catch (e) { }
     return null;
   };
 
@@ -220,52 +220,52 @@ export default function App() {
       const evaluator = createGraphEvaluator(currentLatex, ce);
 
       const compiledExtraGraphs = extraGraphs.map(eg => ({
-          evaluator: createGraphEvaluator(eg.latex, ce),
-          color: eg.color
+        evaluator: createGraphEvaluator(eg.latex, ce),
+        color: eg.color
       }));
-      
+
       let newAsyms = [...graphAsymptotes];
       try {
-          // 1. Lấy tiệm cận đứng/ngang từ BBT
-          const cols = bbtData ? bbtData.cols : calculateVariationTableData(currentLatex, ce);
-          const autoAsyms = extractAsymptotesFromBBT(cols);
-          
-          // 2. Dò tìm thêm tiệm cận xiên
-          const oblique = detectObliqueAsymptote(evaluator);
-          if (oblique) autoAsyms.push({ type: 'oblique', m: oblique.m, n: oblique.n });
+        // 1. Lấy tiệm cận đứng/ngang từ BBT
+        const cols = bbtData ? bbtData.cols : calculateVariationTableData(currentLatex, ce);
+        const autoAsyms = extractAsymptotesFromBBT(cols);
 
-          // 3. Gộp vào danh sách
-          autoAsyms.forEach(auto => {
-              const exists = newAsyms.some(manual => manual.type === auto.type && manual.value === auto.value && manual.m === auto.m);
-              if (!exists) newAsyms.push(auto);
-          });
-          setGraphAsymptotes(newAsyms); 
-      } catch (err) {}
+        // 2. Dò tìm thêm tiệm cận xiên
+        const oblique = detectObliqueAsymptote(evaluator);
+        if (oblique) autoAsyms.push({ type: 'oblique', m: oblique.m, n: oblique.n });
+
+        // 3. Gộp vào danh sách
+        autoAsyms.forEach(auto => {
+          const exists = newAsyms.some(manual => manual.type === auto.type && manual.value === auto.value && manual.m === auto.m);
+          if (!exists) newAsyms.push(auto);
+        });
+        setGraphAsymptotes(newAsyms);
+      } catch (err) { }
 
       const svgData = buildGraphSvg(evaluator, graphConfig, graphAnnotations, graphColor, graphTexts, newAsyms, compiledExtraGraphs);
       setGraphPreview({ ...svgData, bieuThuc: currentLatex });
-      scrollToRef(graphPreviewRef); 
+      scrollToRef(graphPreviewRef);
     } catch (e) { setGraphPreview(null); }
   };
 
   const handleAddAsymptote = () => {
     if (!tempAsymValue.trim()) return;
     try {
-        if (tempAsymType === 'oblique') {
-            // Nếu người dùng nhập tay phương trình (VD: 2x-1), thế x=0 và x=1 để tìm m, n
-            const expr = ce.parse(tempAsymValue);
-            const y0 = parseFloat(expr.subs({x: 0}).evaluate().N().toString());
-            const y1 = parseFloat(expr.subs({x: 1}).evaluate().N().toString());
-            if (!isNaN(y0) && !isNaN(y1)) {
-                setGraphAsymptotes([...graphAsymptotes, { type: 'oblique', m: y1 - y0, n: y0 }]);
-            }
-        } else {
-            const val = parseFloat(ce.parse(tempAsymValue).N().toString());
-            if (!isNaN(val)) setGraphAsymptotes([...graphAsymptotes, { type: tempAsymType, value: val }]);
+      if (tempAsymType === 'oblique') {
+        // Nếu người dùng nhập tay phương trình (VD: 2x-1), thế x=0 và x=1 để tìm m, n
+        const expr = ce.parse(tempAsymValue);
+        const y0 = parseFloat(expr.subs({ x: 0 }).evaluate().N().toString());
+        const y1 = parseFloat(expr.subs({ x: 1 }).evaluate().N().toString());
+        if (!isNaN(y0) && !isNaN(y1)) {
+          setGraphAsymptotes([...graphAsymptotes, { type: 'oblique', m: y1 - y0, n: y0 }]);
         }
-        setTempAsymValue("");
-        //setTimeout(handlePreviewGraph, 50);
-    } catch (e) {}
+      } else {
+        const val = parseFloat(ce.parse(tempAsymValue).N().toString());
+        if (!isNaN(val)) setGraphAsymptotes([...graphAsymptotes, { type: tempAsymType, value: val }]);
+      }
+      setTempAsymValue("");
+      //setTimeout(handlePreviewGraph, 50);
+    } catch (e) { }
   };
 
 
@@ -330,14 +330,14 @@ export default function App() {
   const handleAddText = () => {
     if (!tempTextContent.trim() || !tempTextX.trim() || !tempTextY.trim()) return;
     try {
-        const xVal = parseFloat(ce.parse(tempTextX).N().toString());
-        const yVal = parseFloat(ce.parse(tempTextY).N().toString());
-        if (!isNaN(xVal) && !isNaN(yVal)) {
-            setGraphTexts([...graphTexts, { content: tempTextContent, x: xVal, y: yVal }]);
-            setTempTextContent(""); setTempTextX(""); setTempTextY("");
-            //setTimeout(handlePreviewGraph, 50);
-        }
-    } catch (e) {}
+      const xVal = parseFloat(ce.parse(tempTextX).N().toString());
+      const yVal = parseFloat(ce.parse(tempTextY).N().toString());
+      if (!isNaN(xVal) && !isNaN(yVal)) {
+        setGraphTexts([...graphTexts, { content: tempTextContent, x: xVal, y: yVal }]);
+        setTempTextContent(""); setTempTextX(""); setTempTextY("");
+        //setTimeout(handlePreviewGraph, 50);
+      }
+    } catch (e) { }
   };
   /*
   const handleAddAsymptote = () => {
@@ -603,11 +603,11 @@ export default function App() {
     try {
       await Word.run(async (context) => {
         const range = context.document.getSelection();
-        const cc = range.parentContentControlOrNullObject; 
+        const cc = range.parentContentControlOrNullObject;
         cc.load("title, tag");
-        const ccs = range.contentControls; 
+        const ccs = range.contentControls;
         ccs.load("items/title, items/tag");
-        const pics = range.inlinePictures; 
+        const pics = range.inlinePictures;
         //pics.load("items/altTextDescription");
         pics.load("items/altTextDescription, items/altTextTitle");
         // Tải toàn bộ XML thô để làm Tầng quét số 3
@@ -634,92 +634,92 @@ export default function App() {
           */
 
         // TẦNG 1: Quét Content Control (Sản phẩm chuẩn của E-Editor)
-        if (ccs.items.length > 0 && (ccs.items[0].title === "Etype" || ccs.items[0].title === "LSTS_Math")) { 
-            newFullTag = ccs.items[0].tag; 
-            newTargetCC = ccs.items[0]; 
+        if (ccs.items.length > 0 && (ccs.items[0].title === "Etype" || ccs.items[0].title === "LSTS_Math")) {
+          newFullTag = ccs.items[0].tag;
+          newTargetCC = ccs.items[0];
         }
-        else if (!cc.isNullObject && (cc.title === "Etype" || cc.title === "LSTS_Math")) { 
-            newFullTag = cc.tag; 
-            newTargetCC = cc; 
+        else if (!cc.isNullObject && (cc.title === "Etype" || cc.title === "LSTS_Math")) {
+          newFullTag = cc.tag;
+          newTargetCC = cc;
         }
         // TẦNG 2: Quét Ảnh Hiện Đại (Sản phẩm sau khi Check Compatibility)
         else if (pics.items.length > 0) {
-            const altDesc = pics.items[0].altTextDescription || pics.items[0].altTextTitle || "";
-            if (altDesc.includes("#[ID:")) {
-                const matchTag = altDesc.match(/#\[ID:(.*?)\]/);
-                if (matchTag && matchTag[1]) newFullTag = matchTag[1];
-                
-                // Moi LaTeX ra từ Alt Text luôn
-                const matchLatex = altDesc.match(/Math:\s*(.*?)\s*#\[ID:/);
-                if (matchLatex && matchLatex[1]) latexFromAltTextOrXml = matchLatex[1].trim();
-            }
+          const altDesc = pics.items[0].altTextDescription || pics.items[0].altTextTitle || "";
+          if (altDesc.includes("#[ID:")) {
+            const matchTag = altDesc.match(/#\[ID:(.*?)\]/);
+            if (matchTag && matchTag[1]) newFullTag = matchTag[1];
+
+            // Moi LaTeX ra từ Alt Text luôn
+            const matchLatex = altDesc.match(/Math:\s*(.*?)\s*#\[ID:/);
+            if (matchLatex && matchLatex[1]) latexFromAltTextOrXml = matchLatex[1].trim();
+          }
         }
 
         // TẦNG 3: Quét XML Thô (Sản phẩm nguyên gốc từ Python chưa Convert)
         if (!newFullTag && ooxml.value) {
-            // Regex quét xuyên thấu mã XML
-            const rawMatch = ooxml.value.match(/Math:\s*(.*?)\s*#\[ID:([^\|\]]+)/);
-            if (rawMatch && rawMatch[1] && rawMatch[2]) {
-                let rawLatex = rawMatch[1].trim();
-                // Giải mã các ký tự XML
-                rawLatex = rawLatex.replace(/&amp;/g, '&')
-                                   .replace(/&lt;/g, '<')
-                                   .replace(/&gt;/g, '>')
-                                   .replace(/&quot;/g, '"');
-                
-                latexFromAltTextOrXml = rawLatex;
-                newFullTag = rawMatch[2] + "|SVG"; // Dựng lại tag để lừa Add-in xử lý tiếp
-            }
+          // Regex quét xuyên thấu mã XML
+          const rawMatch = ooxml.value.match(/Math:\s*(.*?)\s*#\[ID:([^\|\]]+)/);
+          if (rawMatch && rawMatch[1] && rawMatch[2]) {
+            let rawLatex = rawMatch[1].trim();
+            // Giải mã các ký tự XML
+            rawLatex = rawLatex.replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"');
+
+            latexFromAltTextOrXml = rawLatex;
+            newFullTag = rawMatch[2] + "|SVG"; // Dựng lại tag để lừa Add-in xử lý tiếp
+          }
         }
 
         const newEqId = newFullTag ? newFullTag.split("|")[0] : "";
         const newEqType = newFullTag ? (newFullTag.split("|")[1] || "SVG") : "";
 
         if (lastEqIdRef.current && lastEqIdRef.current !== newFullTag) {
-          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current); 
-          oldControls.load("items"); 
+          const oldControls = context.document.contentControls.getByTag(lastEqIdRef.current);
+          oldControls.load("items");
           await context.sync();
           if (oldControls.items.length > 0) {
-            const oldCC = oldControls.items[0]; 
-            const oldRange = oldCC.getRange(); 
-            const oldPics = oldRange.inlinePictures; 
-            oldPics.load("items"); 
-       
-            oldRange.load("text"); 
-            
+            const oldCC = oldControls.items[0];
+            const oldRange = oldCC.getRange();
+            const oldPics = oldRange.inlinePictures;
+            oldPics.load("items");
+
+            oldRange.load("text");
+
             await context.sync();
             const oldEqType = lastEqIdRef.current.split("|")[1] || "SVG";
-            const rawText = oldRange.text; 
+            const rawText = oldRange.text;
             const cleanText = rawText.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
             const isPlaceholderOrEmpty = (rawText === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
-            console.info("Placeholder"+isPlaceholderOrEmpty);
+            console.info("Placeholder" + isPlaceholderOrEmpty);
             let isOldEmptied = false;
-            if (oldEqType === "SVG") { 
-              if (oldPics.items.length === 0 && isPlaceholderOrEmpty) 
-                isOldEmptied = true; 
-              } else { 
-                if (isPlaceholderOrEmpty) 
-                  isOldEmptied = true; 
+            if (oldEqType === "SVG") {
+              if (oldPics.items.length === 0 && isPlaceholderOrEmpty)
+                isOldEmptied = true;
+            } else {
+              if (isPlaceholderOrEmpty)
+                isOldEmptied = true;
 
-              }
-            if (isOldEmptied) { 
+            }
+            if (isOldEmptied) {
               oldRange.insertText("", Word.InsertLocation.replace);
-              oldCC.delete(true); 
-              await context.sync(); 
+              oldCC.delete(true);
+              await context.sync();
             }
           }
         }
 
         if (newFullTag) {
-          lastEqIdRef.current = newFullTag; 
+          lastEqIdRef.current = newFullTag;
           let isEmptied = false;
           let isPlaceholderOrEmpty = false;
           let ccRange: Word.Range | null = null;
           if (newTargetCC) {
-            ccRange = newTargetCC.getRange(); 
-            const ccPics = ccRange.inlinePictures; 
-            ccPics.load("items"); 
-            ccRange.load("text"); 
+            ccRange = newTargetCC.getRange();
+            const ccPics = ccRange.inlinePictures;
+            ccPics.load("items");
+            ccRange.load("text");
             await context.sync();
             const cleanText = ccRange.text.replace(/[\s\u200B-\u200D\uFEFF\uFFFC]/g, '').toLowerCase();
             isPlaceholderOrEmpty = (ccRange.text === "" || cleanText.includes("clickortap") || cleanText.includes("vănbản"));
@@ -733,12 +733,12 @@ export default function App() {
           }
           if (isEmptied && newTargetCC) {
             if (mathfieldRef.current) mathfieldRef.current.value = "";
-            setCurrentLatex(""); 
-            lastEqIdRef.current = ""; 
+            setCurrentLatex("");
+            lastEqIdRef.current = "";
             if (isPlaceholderOrEmpty) ccRange.insertText("", Word.InsertLocation.replace);
-            newTargetCC.delete(true); 
+            newTargetCC.delete(true);
             await context.sync();
-          } 
+          }
           else {
             /*
             const latexCode = Office.context.document.settings.get(newEqId);
@@ -748,16 +748,16 @@ export default function App() {
             }
               */
             let latexCode = latexFromAltTextOrXml || Office.context.document.settings.get(newEqId);
-            
-            if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) { 
-                mathfieldRef.current.value = latexCode; 
-                setCurrentLatex(latexCode); 
-                
-                // Đồng bộ hóa: Lưu ngược lại mã này vào Settings để lần sau truy cập siêu tốc
-                if (latexFromAltTextOrXml) {
-                    Office.context.document.settings.set(newEqId, latexFromAltTextOrXml);
-                    Office.context.document.settings.saveAsync();
-                }
+
+            if (latexCode && mathfieldRef.current && mathfieldRef.current.value !== latexCode) {
+              mathfieldRef.current.value = latexCode;
+              setCurrentLatex(latexCode);
+
+              // Đồng bộ hóa: Lưu ngược lại mã này vào Settings để lần sau truy cập siêu tốc
+              if (latexFromAltTextOrXml) {
+                Office.context.document.settings.set(newEqId, latexFromAltTextOrXml);
+                Office.context.document.settings.saveAsync();
+              }
             }
           }
         } else lastEqIdRef.current = "";
@@ -1055,13 +1055,13 @@ export default function App() {
 
             {computeResult && (
               <div ref={computeResultRef}>
-              <Stack  tokens={{ childrenGap: 8 }} style={{ marginTop: "16px", borderTop: "1px dashed #c8c6c4", paddingTop: "12px" }}>
-                <Label style={{ color: "#605e5c", margin: 0 }}>{t.resultLabel}</Label>
-                <div style={{ padding: "10px", backgroundColor: "white", borderRadius: "4px", fontSize: "22px", minHeight: "50px" }}>
-                  <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none" }}>{computeResult}</math-field>
-                </div>
-                <PrimaryButton text={t.insertToWord} iconProps={{ iconName: 'Add' }} onClick={handleInsertComputeResult} style={{ backgroundColor: "#0078d4", borderColor: "transparent", color: "white", width: "fit-content", marginTop: "10px", borderRadius: "6px" }} />
-              </Stack>
+                <Stack tokens={{ childrenGap: 8 }} style={{ marginTop: "16px", borderTop: "1px dashed #c8c6c4", paddingTop: "12px" }}>
+                  <Label style={{ color: "#605e5c", margin: 0 }}>{t.resultLabel}</Label>
+                  <div style={{ padding: "10px", backgroundColor: "white", borderRadius: "4px", fontSize: "22px", minHeight: "50px" }}>
+                    <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none" }}>{computeResult}</math-field>
+                  </div>
+                  <PrimaryButton text={t.insertToWord} iconProps={{ iconName: 'Add' }} onClick={handleInsertComputeResult} style={{ backgroundColor: "#0078d4", borderColor: "transparent", color: "white", width: "fit-content", marginTop: "10px", borderRadius: "6px" }} />
+                </Stack>
               </div>
             )}
           </div>
@@ -1168,116 +1168,116 @@ export default function App() {
               </div>
 
               <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
-                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.asymptoteLabel}</Label>
-                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
-                        <ChoiceGroup 
-                            // 1. THÊM LỰA CHỌN OBLIQUE (XIÊN)
-                            options={[ 
-                                { key: 'vertical', text: t.asymVertical }, 
-                                { key: 'horizontal', text: t.asymHorizontal },
-                                { key: 'oblique', text: t.asymOblique } 
-                            ]} 
-                            selectedKey={tempAsymType} 
-                            // 2. CẬP NHẬT TYPE CHO onChange
-                            onChange={(_, option) => setTempAsymType(option?.key as 'vertical' | 'horizontal' | 'oblique')}
-                            styles={{ flexContainer: { display: 'flex', flexDirection: 'row', gap: '10px' } }}
-                        />
-                        {/* 3. TỰ ĐỘNG ĐỔI PLACEHOLDER NẾU CHỌN XIÊN */}
-                        <TextField 
-                            placeholder={tempAsymType === 'oblique' ? t.asymObliquePlaceholder : t.asymValuePlaceholder} 
-                            value={tempAsymValue} 
-                            onChange={(_, v) => setTempAsymValue(v || "")} 
-                            styles={{ root: { minWidth: 150 } }} 
-                        />
-                        <DefaultButton text={t.addAsymBtn} onClick={handleAddAsymptote} />
-                    </Stack>
+                <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.asymptoteLabel}</Label>
+                <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                  <ChoiceGroup
+                    // 1. THÊM LỰA CHỌN OBLIQUE (XIÊN)
+                    options={[
+                      { key: 'vertical', text: t.asymVertical },
+                      { key: 'horizontal', text: t.asymHorizontal },
+                      { key: 'oblique', text: t.asymOblique }
+                    ]}
+                    selectedKey={tempAsymType}
+                    // 2. CẬP NHẬT TYPE CHO onChange
+                    onChange={(_, option) => setTempAsymType(option?.key as 'vertical' | 'horizontal' | 'oblique')}
+                    styles={{ flexContainer: { display: 'flex', flexDirection: 'row', gap: '10px' } }}
+                  />
+                  {/* 3. TỰ ĐỘNG ĐỔI PLACEHOLDER NẾU CHỌN XIÊN */}
+                  <TextField
+                    placeholder={tempAsymType === 'oblique' ? t.asymObliquePlaceholder : t.asymValuePlaceholder}
+                    value={tempAsymValue}
+                    onChange={(_, v) => setTempAsymValue(v || "")}
+                    styles={{ root: { minWidth: 150 } }}
+                  />
+                  <DefaultButton text={t.addAsymBtn} onClick={handleAddAsymptote} />
+                </Stack>
 
-                    {graphAsymptotes.length > 0 && (
-                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                        {graphAsymptotes.map((asym, idx) => (
-                            <div key={`asym-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                <span style={{ fontWeight: 'bold', color: '#0078d4' }}>
-                                    {/* 4. RENDER LABEL CHO CẢ 3 LOẠI */}
-                                    {asym.type === 'vertical' ? `${t.asymVerticalPrefix}${asym.value}` : 
-                                     asym.type === 'horizontal' ? `${t.asymHorizontalPrefix}${asym.value}` : 
-                                     `${t.asymObliquePrefix}${asym.m}x${(asym.n || 0) >= 0 ? '+' : ''}${asym.n}`}
-                                </span>
-                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
-                                    const newAsyms = graphAsymptotes.filter((_, i) => i !== idx);
-                                    setGraphAsymptotes(newAsyms);
-                                    //setTimeout(() => handlePreviewGraph(), 50);
-                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
-                            </div>
-                        ))}
-                        </div>
-                    )}
-                </div>
+                {graphAsymptotes.length > 0 && (
+                  <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    {graphAsymptotes.map((asym, idx) => (
+                      <div key={`asym-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontWeight: 'bold', color: '#0078d4' }}>
+                          {/* 4. RENDER LABEL CHO CẢ 3 LOẠI */}
+                          {asym.type === 'vertical' ? `${t.asymVerticalPrefix}${asym.value}` :
+                            asym.type === 'horizontal' ? `${t.asymHorizontalPrefix}${asym.value}` :
+                              `${t.asymObliquePrefix}${asym.m}x${(asym.n || 0) >= 0 ? '+' : ''}${asym.n}`}
+                        </span>
+                        <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                          const newAsyms = graphAsymptotes.filter((_, i) => i !== idx);
+                          setGraphAsymptotes(newAsyms);
+                          //setTimeout(() => handlePreviewGraph(), 50);
+                        }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-                <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
-                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.customTextLabel}</Label>
-                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
-                        <TextField placeholder={t.textExprPlaceholder} value={tempTextContent} onChange={(_, v) => setTempTextContent(v || "")} styles={{ root: { flexGrow: 1, minWidth: 120 } }} />
-                        <TextField placeholder={t.textCoordX} value={tempTextX} onChange={(_, v) => setTempTextX(v || "")} styles={{ root: { width: 80 } }} />
-                        <TextField placeholder={t.textCoordY} value={tempTextY} onChange={(_, v) => setTempTextY(v || "")} styles={{ root: { width: 80 } }} />
-                        <DefaultButton text={t.addTextBtn} onClick={handleAddText} />
-                    </Stack>
+              <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
+                <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.customTextLabel}</Label>
+                <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                  <TextField placeholder={t.textExprPlaceholder} value={tempTextContent} onChange={(_, v) => setTempTextContent(v || "")} styles={{ root: { flexGrow: 1, minWidth: 120 } }} />
+                  <TextField placeholder={t.textCoordX} value={tempTextX} onChange={(_, v) => setTempTextX(v || "")} styles={{ root: { width: 80 } }} />
+                  <TextField placeholder={t.textCoordY} value={tempTextY} onChange={(_, v) => setTempTextY(v || "")} styles={{ root: { width: 80 } }} />
+                  <DefaultButton text={t.addTextBtn} onClick={handleAddText} />
+                </Stack>
 
-                    {graphTexts.length > 0 && (
-                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                        {graphTexts.map((txt, idx) => (
-                            <div key={`txt-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
-                                <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
-                                    {txt.content}
-                                </math-field>
-                                <span>({txt.x}; {txt.y})</span>
-                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
-                                    setGraphTexts(graphTexts.filter((_, i) => i !== idx));
-                                    //setTimeout(() => handlePreviewGraph(), 50);
-                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
-                            </div>
-                        ))}
-                        </div>
-                    )}
-                </div>   
+                {graphTexts.length > 0 && (
+                  <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    {graphTexts.map((txt, idx) => (
+                      <div key={`txt-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                          {txt.content}
+                        </math-field>
+                        <span>({txt.x}; {txt.y})</span>
+                        <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                          setGraphTexts(graphTexts.filter((_, i) => i !== idx));
+                          //setTimeout(() => handlePreviewGraph(), 50);
+                        }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
 
-                {/* --- KHU VỰC VẼ NHIỀU ĐỒ THỊ --- */}
-                <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
-                    <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.extraGraphsLabel}</Label>
-                    <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
-                        <TextField placeholder={t.extraGraphExprPlaceholder} value={tempExtraLatex} onChange={(_, v) => setTempExtraLatex(v || "")} styles={{ root: { flexGrow: 1, minWidth: 150 } }} />
-                        <input
-                            type="color"
-                            value={tempExtraColor}
-                            onChange={(e) => setTempExtraColor(e.target.value)}
-                            style={{ width: "32px", height: "32px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }}
-                            title="Color"
-                        />
-                        <DefaultButton text={t.addExtraGraphBtn} onClick={() => {
-                            if (tempExtraLatex.trim()) {
-                                setExtraGraphs([...extraGraphs, { latex: tempExtraLatex, color: tempExtraColor }]);
-                                setTempExtraLatex("");
-                            }
-                        }} />
-                    </Stack>
+              {/* --- KHU VỰC VẼ NHIỀU ĐỒ THỊ --- */}
+              <div style={{ width: "100%", marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #c8c6c4" }}>
+                <Label style={{ fontSize: "14px", color: "#605e5c", marginBottom: "8px" }}>{t.extraGraphsLabel}</Label>
+                <Stack horizontal tokens={{ childrenGap: 8 }} verticalAlign="center" wrap>
+                  <TextField placeholder={t.extraGraphExprPlaceholder} value={tempExtraLatex} onChange={(_, v) => setTempExtraLatex(v || "")} styles={{ root: { flexGrow: 1, minWidth: 150 } }} />
+                  <input
+                    type="color"
+                    value={tempExtraColor}
+                    onChange={(e) => setTempExtraColor(e.target.value)}
+                    style={{ width: "32px", height: "32px", padding: "0", border: "1px solid #ccc", cursor: "pointer", borderRadius: "4px" }}
+                    title="Color"
+                  />
+                  <DefaultButton text={t.addExtraGraphBtn} onClick={() => {
+                    if (tempExtraLatex.trim()) {
+                      setExtraGraphs([...extraGraphs, { latex: tempExtraLatex, color: tempExtraColor }]);
+                      setTempExtraLatex("");
+                    }
+                  }} />
+                </Stack>
 
-                    {extraGraphs.length > 0 && (
-                        <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                        {extraGraphs.map((eg, idx) => (
-                            <div key={`eg-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px", borderLeft: `4px solid ${eg.color}` }}>
-                                <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
-                                    {eg.latex}
-                                </math-field>
-                                <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
-                                    setExtraGraphs(extraGraphs.filter((_, i) => i !== idx));
-                                }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
-                            </div>
-                        ))}
-                        </div>
-                    )}
-                </div>
-                {/* --- KẾT THÚC --- */}          
-              
+                {extraGraphs.length > 0 && (
+                  <div style={{ marginTop: "10px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    {extraGraphs.map((eg, idx) => (
+                      <div key={`eg-${idx}`} style={{ padding: "4px 8px", backgroundColor: "#e1dfdd", borderRadius: "4px", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px", borderLeft: `4px solid ${eg.color}` }}>
+                        <math-field read-only style={{ border: "none", outline: "none", boxShadow: "none", backgroundColor: "transparent", minHeight: "unset", padding: 0, fontSize: "14px" }}>
+                          {eg.latex}
+                        </math-field>
+                        <IconButton iconProps={{ iconName: 'Cancel' }} onClick={() => {
+                          setExtraGraphs(extraGraphs.filter((_, i) => i !== idx));
+                        }} styles={{ root: { width: 20, height: 20 }, icon: { fontSize: 10, color: "red" } }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* --- KẾT THÚC --- */}
+
               <PrimaryButton text={t.insertToWord} iconProps={{ iconName: "LineChart" }} onClick={handleInsertGraph} style={{ marginTop: "20px", height: "40px", borderRadius: "6px", backgroundColor: "#0078d4", borderColor: "transparent", width: "100%", maxWidth: "300px" }} />
             </div>
           )}
@@ -1351,6 +1351,20 @@ export default function App() {
           </Panel>
 
         </Stack>
+      </div>
+      {/* THÔNG TIN NGƯỜI PHÁT TRIỂN */}
+      <div style={{
+        marginTop: "24px",
+        paddingTop: "12px",
+        borderTop: "1px solid #e1dfdd",
+        textAlign: "center",
+        color: "#605e5c",
+        fontSize: "12px"
+      }}>
+        <span>Developed by <strong>Huỳnh Quốc Thịnh - Huỳnh Bảo Thiên</strong></span>
+        <div style={{ fontSize: "11px", marginTop: "2px", color: "#a19f9d" }}>
+          LSTS &copy; {new Date().getFullYear()}
+        </div>
       </div>
     </ThemeProvider>
   );
